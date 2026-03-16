@@ -39,3 +39,9 @@ yarn-error.log*
 
 # Scripts runtime artifacts
 scripts/node_modules/
+
+# Local research docs (English versions go in docs/)
+*.md
+!app/README.md
+!README.md
+!docs/**/*.md
