@@ -97,9 +97,9 @@ describe('GET /api/market/stablecoin-history', () => {
     // Must not crash — stablecoin data should still return
     expect(json.state).toBe('success')
     expect(json.data.length).toBeGreaterThan(0)
-    // T-Bill rate null when FRED unavailable
+    // T-Bill rate falls back to static DTB3 data when FRED unavailable
     const point = json.data[0]
-    expect(point.tbillRate).toBeNull()
+    expect(point.tbillRate).not.toBeNull()
     expect(point.totalMarketCapB).toBeGreaterThan(0)
   })
 })

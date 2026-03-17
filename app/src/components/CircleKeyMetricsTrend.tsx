@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip,
 } from 'recharts'
 
 interface DataPoint {
@@ -14,58 +13,124 @@ interface DataPoint {
   tbillRate: number | null
 }
 
+// Show only every Nth label to avoid crowding
+function xTickFormatter(val: string, idx: number, total: number): string {
+  const step = total <= 12 ? 2 : 4
+  return idx % step === 0 ? val.slice(2) : '' // '2024-03' → '24-03'
+}
+
+function Sparkline({
+  data,
+  dataKey,
+  color,
+  yTickFormatter,
+  isStep,
+}: {
+  data: DataPoint[]
+  dataKey: keyof DataPoint
+  color: string
+  yTickFormatter: (v: number) => string
+  isStep?: boolean
+}) {
+  const filtered = data.filter(d => d[dataKey] != null)
+  const values = filtered.map(d => d[dataKey] as number)
+  if (values.length === 0) return <div className="h-20 flex items-center justify-center text-xs text-gray-300">暂无数据</div>
+
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const pad = (max - min) * 0.2 || 0.5
+  const domain: [number, number] = [min - pad, max + pad]
+
+  return (
+    <ResponsiveContainer width="100%" height={80}>
+      <AreaChart data={filtered} margin={{ top: 4, bottom: 0, left: 0, right: 4 }}>
+        <defs>
+          <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+            <stop offset="95%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 9, fill: '#9ca3af' }}
+          tickFormatter={(val, idx) => xTickFormatter(val, idx, filtered.length)}
+          axisLine={false}
+          tickLine={false}
+          height={16}
+        />
+        <YAxis
+          domain={domain}
+          tickCount={3}
+          tick={{ fontSize: 9, fill: '#9ca3af' }}
+          tickFormatter={yTickFormatter}
+          width={36}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Area
+          type={isStep ? 'stepAfter' : 'monotone'}
+          dataKey={dataKey as string}
+          stroke={color}
+          strokeWidth={1.5}
+          fill={`url(#grad-${dataKey})`}
+          dot={false}
+          connectNulls
+        />
+        <Tooltip
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null
+            const val = payload[0]?.value as number
+            return (
+              <div className="bg-white border border-gray-200 rounded px-2 py-1 text-xs shadow">
+                <span className="text-gray-400 mr-1">{label}</span>
+                <span className="font-semibold text-black">{yTickFormatter(val)}</span>
+              </div>
+            )
+          }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+
 function DeltaBadge({ value, suffix = '' }: { value: number; suffix?: string }) {
   if (value === 0) return null
   const up = value > 0
+  const abs = Math.abs(value)
+  const formatted = abs >= 10 ? abs.toFixed(0) : abs.toFixed(1)
   return (
     <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
-      {up ? '↑' : '↓'}{Math.abs(value).toFixed(1)}{suffix}
+      {up ? '↑' : '↓'}{formatted}{suffix}
     </span>
   )
 }
 
-function MetricCard({
-  label,
-  value,
-  delta,
-  suffix = '',
-  color,
-}: {
-  label: string
+interface CardConfig {
+  title: string
   value: string
-  delta?: number
-  suffix?: string
+  delta: number
+  suffix: string
+  dataKey: keyof DataPoint
   color: string
-}) {
-  return (
-    <div className="rounded-lg bg-gray-50 px-4 py-3">
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <div className="flex items-baseline gap-2">
-        <p className="text-xl font-semibold" style={{ color }}>{value}</p>
-        {delta !== undefined && <DeltaBadge value={delta} suffix={suffix} />}
-      </div>
-    </div>
-  )
+  yTickFormatter: (v: number) => string
+  isStep?: boolean
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null
+function MetricSparkCard({ cfg, data }: { cfg: CardConfig; data: DataPoint[] }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
-      <p className="font-bold text-gray-900 mb-2">{label}</p>
-      {payload.map((p: any) => (
-        <div key={p.dataKey} className="flex items-center gap-2 mb-1">
-          <span className="w-2 h-2 rounded-full inline-block" style={{ background: p.color }} />
-          <span className="text-gray-700">{p.name}:</span>
-          <span className="font-semibold text-gray-900">
-            {p.dataKey === 'tbillRate'
-              ? `${p.value?.toFixed(2)}%`
-              : p.dataKey === 'usdcSharePct'
-              ? `${p.value?.toFixed(1)}%`
-              : `$${p.value?.toFixed(1)}B`}
-          </span>
-        </div>
-      ))}
+    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+      <p className="text-xs text-gray-500 mb-0.5">{cfg.title}</p>
+      <div className="flex items-baseline gap-2 mb-1">
+        <p className="text-xl font-semibold text-black">{cfg.value}</p>
+        <DeltaBadge value={cfg.delta} suffix={cfg.suffix} />
+      </div>
+      <Sparkline
+        data={data}
+        dataKey={cfg.dataKey}
+        color={cfg.color}
+        yTickFormatter={cfg.yTickFormatter}
+        isStep={cfg.isStep}
+      />
     </div>
   )
 }
@@ -87,128 +152,67 @@ export function CircleKeyMetricsTrend() {
   const latest = data[data.length - 1]
   const prev = data[data.length - 2]
 
-  const deltaTotal = latest && prev ? latest.totalMarketCapB - prev.totalMarketCapB : 0
-  const deltaShare = latest && prev ? latest.usdcSharePct - prev.usdcSharePct : 0
-  const deltaRate = latest && prev && latest.tbillRate != null && prev.tbillRate != null
-    ? latest.tbillRate - prev.tbillRate : 0
-
-  // Only show every other month label to avoid crowding
-  const tickFormatter = (val: string, idx: number) => idx % 3 === 0 ? val : ''
+  const cards: CardConfig[] = [
+    {
+      title: '稳定币总市值',
+      value: latest ? `$${latest.totalMarketCapB.toFixed(0)}B` : '—',
+      delta: latest && prev ? latest.totalMarketCapB - prev.totalMarketCapB : 0,
+      suffix: 'B',
+      dataKey: 'totalMarketCapB',
+      color: '#2962ff',
+      yTickFormatter: (v) => `$${v.toFixed(0)}B`,
+    },
+    {
+      title: 'USDC 市值',
+      value: latest ? `$${latest.usdcMarketCapB.toFixed(1)}B` : '—',
+      delta: latest && prev ? latest.usdcMarketCapB - prev.usdcMarketCapB : 0,
+      suffix: 'B',
+      dataKey: 'usdcMarketCapB',
+      color: '#1565c0',
+      yTickFormatter: (v) => `$${v.toFixed(0)}B`,
+    },
+    {
+      title: 'USDC 占比',
+      value: latest ? `${latest.usdcSharePct.toFixed(1)}%` : '—',
+      delta: latest && prev ? latest.usdcSharePct - prev.usdcSharePct : 0,
+      suffix: '%',
+      dataKey: 'usdcSharePct',
+      color: '#26a69a',
+      yTickFormatter: (v) => `${v.toFixed(1)}%`,
+    },
+    {
+      title: 'T-Bill 利率',
+      value: latest?.tbillRate != null ? `${latest.tbillRate.toFixed(2)}%` : '—',
+      delta:
+        latest && prev && latest.tbillRate != null && prev.tbillRate != null
+          ? latest.tbillRate - prev.tbillRate
+          : 0,
+      suffix: '%',
+      dataKey: 'tbillRate',
+      color: '#f5ac37',
+      yTickFormatter: (v) => `${v.toFixed(2)}%`,
+      isStep: true, // Fed rate holds steady between meetings → step chart
+    },
+  ]
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">核心指标趋势</h3>
-        <p className="text-xs text-gray-500 mt-0.5">稳定币市值 · USDC 占比 · 美联储利率｜过去 24 个月</p>
+        <p className="text-xs text-gray-500 mt-0.5">过去 24 个月月度数据</p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-40 text-sm text-gray-400">加载中…</div>
       ) : (
         <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <MetricCard
-              label="稳定币总市值"
-              value={latest ? `$${latest.totalMarketCapB.toFixed(0)}B` : '—'}
-              delta={deltaTotal}
-              suffix="B"
-              color="#2962ff"
-            />
-            <MetricCard
-              label="USDC 市场占比"
-              value={latest ? `${latest.usdcSharePct.toFixed(1)}%` : '—'}
-              delta={deltaShare}
-              suffix="%"
-              color="#26a69a"
-            />
-            <MetricCard
-              label="3M T-Bill 利率"
-              value={latest?.tbillRate != null ? `${latest.tbillRate.toFixed(2)}%` : '—'}
-              delta={deltaRate}
-              suffix="%"
-              color="#f5ac37"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            {cards.map(cfg => (
+              <MetricSparkCard key={cfg.dataKey} cfg={cfg} data={data} />
+            ))}
           </div>
-
-          {/* Chart */}
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={data} margin={{ left: 0, right: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 10, fill: '#111827' }}
-                tickFormatter={tickFormatter}
-              />
-              {/* Left axis: market cap $B */}
-              <YAxis
-                yAxisId="cap"
-                orientation="left"
-                tick={{ fontSize: 10, fill: '#111827' }}
-                tickFormatter={(v: number) => `$${v}B`}
-                width={55}
-              />
-              {/* Right axis: % */}
-              <YAxis
-                yAxisId="pct"
-                orientation="right"
-                tick={{ fontSize: 10, fill: '#111827' }}
-                tickFormatter={(v: number) => `${v}%`}
-                width={40}
-                domain={[0, 'auto']}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                wrapperStyle={{ fontSize: 11, color: '#111827', paddingTop: 8 }}
-              />
-              <Line
-                yAxisId="cap"
-                type="monotone"
-                dataKey="totalMarketCapB"
-                name="稳定币总市值"
-                stroke="#2962ff"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                yAxisId="cap"
-                type="monotone"
-                dataKey="usdcMarketCapB"
-                name="USDC 市值"
-                stroke="#1565c0"
-                strokeWidth={2}
-                strokeDasharray="4 2"
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                yAxisId="pct"
-                type="monotone"
-                dataKey="usdcSharePct"
-                name="USDC 占比"
-                stroke="#26a69a"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                yAxisId="pct"
-                type="monotone"
-                dataKey="tbillRate"
-                name="T-Bill 利率"
-                stroke="#f5ac37"
-                strokeWidth={2}
-                strokeDasharray="6 3"
-                dot={false}
-                activeDot={{ r: 4 }}
-                connectNulls
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-
-          <p className="text-xs text-gray-400 mt-2">
-            数据来源：DefiLlama · FRED DTB3 | 月度数据，每小时更新
+          <p className="text-xs text-gray-400 mt-3">
+            数据来源：DefiLlama · FRED DTB3 | 每小时更新
           </p>
         </>
       )}

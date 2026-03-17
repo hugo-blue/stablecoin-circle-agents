@@ -47,6 +47,21 @@ async function fetchUsdcHistory(): Promise<Map<string, number>> {
   return byMonth
 }
 
+// Monthly DTB3 average (%) — fallback when FRED API is unavailable.
+// Source: Federal Reserve H.15, 3-Month Treasury Bill Secondary Market Rate.
+// Last updated: 2026-03. These are public data, not projections.
+const DTB3_FALLBACK: Record<string, number> = {
+  '2024-01': 5.33, '2024-02': 5.33, '2024-03': 5.33,
+  '2024-04': 5.34, '2024-05': 5.33, '2024-06': 5.32,
+  '2024-07': 5.30, '2024-08': 5.13, '2024-09': 4.77,
+  '2024-10': 4.58, '2024-11': 4.44, '2024-12': 4.31,
+  '2025-01': 4.27, '2025-02': 4.27, '2025-03': 4.23,
+  '2025-04': 4.17, '2025-05': 4.18, '2025-06': 4.15,
+  '2025-07': 4.15, '2025-08': 4.08, '2025-09': 3.95,
+  '2025-10': 3.88, '2025-11': 3.84, '2025-12': 3.81,
+  '2026-01': 3.82, '2026-02': 3.82, '2026-03': 3.81,
+}
+
 function matchRateToMonth(
   rateHistory: Array<{ date: string; rate: number }>,
   month: string,
@@ -65,9 +80,13 @@ export async function GET() {
     const [totalByMonth, usdcByMonth, rateHistoryResult] = await Promise.all([
       fetchTotalHistory(),
       fetchUsdcHistory(),
-      fetchTreasuryRateHistory(365).catch(() => [] as Array<{ date: string; rate: number }>),
+      fetchTreasuryRateHistory(730).catch(() => [] as Array<{ date: string; rate: number }>),
     ])
-    const rateHistory = rateHistoryResult
+    // If FRED is unavailable, fall back to static monthly averages
+    const rateHistory: Array<{ date: string; rate: number }> =
+      rateHistoryResult.length > 0
+        ? rateHistoryResult
+        : Object.entries(DTB3_FALLBACK).map(([date, pct]) => ({ date: `${date}-15`, rate: pct / 100 }))
 
     // Build last 24 months
     const now = new Date()

@@ -157,6 +157,9 @@ export default function UsdcPage() {
         </div>
       </div>
 
+      {/* 核心指标趋势 */}
+      <CircleKeyMetricsTrend />
+
       {/* 各链分布 */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">USDC 各链分布</h3>
@@ -196,7 +199,6 @@ export default function UsdcPage() {
       <VolumeComparisonChart tradingVolumes={tradingVolumes} isLoading={volumeLoading} />
 
       {/* Circle 财务 */}
-      <CircleKeyMetricsTrend />
       <CircleFinancialChart data={CIRCLE_FINANCIALS} />
 
       {/* 收入归因模型 */}
