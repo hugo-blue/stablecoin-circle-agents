@@ -6,11 +6,11 @@ vi.mock('@/lib/api/fred', () => ({
 
 import { fetchTreasuryRateHistory } from '@/lib/api/fred'
 
-// Dates within last 24 months (from 2026-03): use 2025-01, 2025-06, 2025-12
+// Dates within last 24 months (from 2026-03): 2025-01, 2025-06, 2025-12
 const MOCK_LLAMA_ALL = [
-  { date: '1735689600', totalCirculatingUSD: { peggedUSD: 200_000_000_000 } }, // 2025-01-01
-  { date: '1748736000', totalCirculatingUSD: { peggedUSD: 230_000_000_000 } }, // 2025-06-01
-  { date: '1767225600', totalCirculatingUSD: { peggedUSD: 270_000_000_000 } }, // 2025-12-01
+  { date: '1735689600', totalCirculatingUSD: { peggedUSD: 200_000_000_000 } }, // 2025-01
+  { date: '1748736000', totalCirculatingUSD: { peggedUSD: 230_000_000_000 } }, // 2025-06
+  { date: '1767225600', totalCirculatingUSD: { peggedUSD: 270_000_000_000 } }, // 2025-12
 ]
 
 const MOCK_LLAMA_USDC = {
@@ -27,23 +27,19 @@ const MOCK_FRED_HISTORY = [
   { date: '2025-12-01', rate: 0.0381 },
 ]
 
-function setupFetchMock() {
-  vi.stubGlobal('fetch', vi.fn((url: string) => {
-    if (url.includes('stablecoincharts/all')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_LLAMA_ALL) })
-    }
-    if (url.includes('stablecoin/2')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_LLAMA_USDC) })
-    }
-    return Promise.resolve({ ok: false, json: () => Promise.resolve({}) })
-  }))
-}
-
 describe('GET /api/market/stablecoin-history', () => {
   beforeEach(() => {
-    vi.resetModules()
+    vi.restoreAllMocks()
     vi.mocked(fetchTreasuryRateHistory).mockResolvedValue(MOCK_FRED_HISTORY)
-    setupFetchMock()
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url.includes('stablecoincharts/all')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_LLAMA_ALL) })
+      }
+      if (url.includes('stablecoin/2')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_LLAMA_USDC) })
+      }
+      return Promise.resolve({ ok: false })
+    }))
   })
 
   it('returns monthly data points with all three metrics', async () => {
@@ -90,5 +86,20 @@ describe('GET /api/market/stablecoin-history', () => {
     expect(res.status).toBe(502)
     const json = await res.json()
     expect(json.state).toBe('error')
+  })
+
+  it('returns stablecoin data even when FRED API fails', async () => {
+    // Catches real-world scenario: DEMO_KEY rate-limits FRED (400 error)
+    vi.mocked(fetchTreasuryRateHistory).mockRejectedValue(new Error('FRED API error: 400'))
+    const { GET } = await import('@/app/api/market/stablecoin-history/route')
+    const res = await GET()
+    const json = await res.json()
+    // Must not crash — stablecoin data should still return
+    expect(json.state).toBe('success')
+    expect(json.data.length).toBeGreaterThan(0)
+    // T-Bill rate null when FRED unavailable
+    const point = json.data[0]
+    expect(point.tbillRate).toBeNull()
+    expect(point.totalMarketCapB).toBeGreaterThan(0)
   })
 })

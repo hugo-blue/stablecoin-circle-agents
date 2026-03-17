@@ -61,11 +61,13 @@ function matchRateToMonth(
 
 export async function GET() {
   try {
-    const [totalByMonth, usdcByMonth, rateHistory] = await Promise.all([
+    // FRED is optional — failure should not block stablecoin data
+    const [totalByMonth, usdcByMonth, rateHistoryResult] = await Promise.all([
       fetchTotalHistory(),
       fetchUsdcHistory(),
-      fetchTreasuryRateHistory(730), // 2 years
+      fetchTreasuryRateHistory(365).catch(() => [] as Array<{ date: string; rate: number }>),
     ])
+    const rateHistory = rateHistoryResult
 
     // Build last 24 months
     const now = new Date()
