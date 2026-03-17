@@ -14,6 +14,7 @@ import { NanopaymentsCard } from '@/components/NanopaymentsCard'
 import { VolumeComparisonChart } from '@/components/VolumeComparisonChart'
 import { RevenueAttributionChart } from '@/components/RevenueAttributionChart'
 import { USStablecoinEcosystem } from '@/components/USStablecoinEcosystem'
+import { CircleKeyMetricsTrend } from '@/components/CircleKeyMetricsTrend'
 
 export default function UsdcPage() {
   const [markets, setMarkets] = useState<StablecoinMarket[]>([])
@@ -183,6 +184,7 @@ export default function UsdcPage() {
       <VolumeComparisonChart tradingVolumes={tradingVolumes} isLoading={volumeLoading} />
 
       {/* Circle 财务 */}
+      <CircleKeyMetricsTrend />
       <CircleFinancialChart data={CIRCLE_FINANCIALS} />
 
       {/* 收入归因模型 */}
