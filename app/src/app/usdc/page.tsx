@@ -21,11 +21,12 @@ export default function UsdcPage() {
   const [chains, setChains] = useState<ChainDistribution[]>([])
   const [mintBurn, setMintBurn] = useState<MintBurnFlow[]>([])
   const [usdcSharePct, setUsdcSharePct] = useState<number | null>(null)
-  const [usdcShareChange, setUsdcShareChange] = useState<number | null>(null)
   const [tradingVolumes, setTradingVolumes] = useState<StablecoinVolume[]>([])
   const [loading, setLoading] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(true)
   const [volumeLoading, setVolumeLoading] = useState(true)
+  const [flowPeriod, setFlowPeriod] = useState<1 | 7 | 30>(7)
+  const [marketShareHistory, setMarketShareHistory] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchData() {
@@ -58,13 +59,9 @@ export default function UsdcPage() {
         const histData = await histRes.json()
         if (histData.data?.marketShare?.length) {
           const ms = histData.data.marketShare
+          setMarketShareHistory(ms)
           const latest = ms[ms.length - 1]
           setUsdcSharePct(latest.USDC as number)
-          // 30d change
-          if (ms.length > 30) {
-            const prev30 = ms[ms.length - 31]
-            setUsdcShareChange(Math.round(((latest.USDC as number) - (prev30.USDC as number)) * 100) / 100)
-          }
         }
       } catch {}
       finally { setHistoryLoading(false) }
@@ -92,9 +89,15 @@ export default function UsdcPage() {
     .sort((a, b) => b.supplyUsd - a.supplyUsd)
   const totalUsdcChains = chains.reduce((s, d) => s + d.supplyUsd, 0)
 
-  // Calculate 30d net flow for USDC
-  const last30 = mintBurn.slice(-30)
-  const net30d = last30.reduce((s, f) => s + f.netFlowUsd, 0)
+  // Net flow for selected period
+  const netFlow = mintBurn.slice(-flowPeriod).reduce((s, f) => s + f.netFlowUsd, 0)
+
+  // Market share change for selected period
+  const msLatest = marketShareHistory.length > 0 ? marketShareHistory[marketShareHistory.length - 1] : null
+  const msPrev = marketShareHistory.length > flowPeriod ? marketShareHistory[marketShareHistory.length - 1 - flowPeriod] : null
+  const usdcShareChangePeriod = msLatest && msPrev
+    ? Math.round(((msLatest.USDC as number) - (msPrev.USDC as number)) * 100) / 100
+    : null
 
   return (
     <div className="space-y-6">
@@ -115,13 +118,17 @@ export default function UsdcPage() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mb-1">市占率</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm text-gray-500">市占率</p>
+                <PeriodToggle value={flowPeriod} onChange={setFlowPeriod} />
+              </div>
               <p className="text-2xl font-semibold text-gray-900">
                 {usdcSharePct != null ? `${usdcSharePct.toFixed(2)}%` : '—'}
               </p>
-              {usdcShareChange != null && (
-                <p className={`text-sm mt-1 ${usdcShareChange > 0 ? 'text-green-600' : usdcShareChange < 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                  {usdcShareChange > 0 ? '+' : ''}{usdcShareChange.toFixed(2)}pp <span className="text-gray-400">30D</span>
+              {usdcShareChangePeriod != null && (
+                <p className={`text-sm mt-1 ${usdcShareChangePeriod > 0 ? 'text-green-600' : usdcShareChangePeriod < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                  {usdcShareChangePeriod > 0 ? '+' : ''}{usdcShareChangePeriod.toFixed(2)}pp
+                  <span className="text-gray-400 ml-1">{flowPeriod}D</span>
                 </p>
               )}
             </>
@@ -135,11 +142,16 @@ export default function UsdcPage() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mb-1">30D 净发行</p>
-              <p className={`text-2xl font-semibold ${net30d >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {formatUSD(Math.abs(net30d))}
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm text-gray-500">净发行</p>
+                <PeriodToggle value={flowPeriod} onChange={setFlowPeriod} />
+              </div>
+              <p className={`text-2xl font-semibold ${netFlow >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {formatUSD(Math.abs(netFlow))}
               </p>
-              <p className="text-xs text-gray-400 mt-1">{net30d >= 0 ? '净发行' : '净赎回'}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {netFlow >= 0 ? '净发行' : '净赎回'} · {flowPeriod}D
+              </p>
             </>
           )}
         </div>
@@ -283,6 +295,25 @@ function UsdcMintBurnChart({ data, isLoading }: { data: MintBurnFlow[], isLoadin
           />
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+
+function PeriodToggle({ value, onChange }: { value: 1 | 7 | 30; onChange: (v: 1 | 7 | 30) => void }) {
+  return (
+    <div className="flex gap-0.5">
+      {([1, 7, 30] as const).map(p => (
+        <button
+          key={p}
+          onClick={() => onChange(p)}
+          className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+            value === p ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          {p}D
+        </button>
+      ))}
     </div>
   )
 }
