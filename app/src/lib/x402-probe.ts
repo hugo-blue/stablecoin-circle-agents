@@ -2,6 +2,7 @@ import { extractPayToAddress } from '@/lib/x402'
 
 type ProbeOptions = {
   timeoutMs?: number
+  method?: 'GET' | 'POST'
 }
 
 /**
@@ -20,14 +21,14 @@ export async function probeX402Endpoint(
 ): Promise<string | null> {
   if (!endpoint) return null
 
-  const { timeoutMs = 8_000 } = options
+  const { timeoutMs = 8_000, method = 'GET' } = options
 
   const timeout = new Promise<null>(resolve =>
     setTimeout(() => resolve(null), timeoutMs)
   )
 
   const probe = fetch(endpoint, {
-    method: 'GET',
+    method,
     headers: { 'User-Agent': 'x402-probe/1.0 StablePulse' },
   }).then(response => {
     if (response.status !== 402) return null

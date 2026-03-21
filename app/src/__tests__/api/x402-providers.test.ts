@@ -8,7 +8,7 @@ function isIsoTimestamp(value: unknown): boolean {
   return !isNaN(Date.parse(value))
 }
 
-const VALID_TRACK_STATUSES = ['verified', 'endpoint_known', 'pending', 'not_x402']
+const VALID_TRACK_STATUSES = ['verified', 'endpoint_known', 'probe_blocked', 'pending', 'not_x402']
 
 // ─── contract: response shape ────────────────────────────────────────────────
 

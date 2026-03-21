@@ -67,6 +67,7 @@ const PROVIDER_DESC: Record<string, string> = {
 const TRACK_STATUS_LABEL: Record<string, string> = {
   verified:       '已验证',
   endpoint_known: 'endpoint 已知',
+  probe_blocked:  '探针被拦截',
   pending:        '待验证',
   not_x402:       '非 x402',
 }

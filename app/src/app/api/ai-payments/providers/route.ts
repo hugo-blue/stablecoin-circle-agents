@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { probeX402Endpoint } from '@/lib/x402-probe'
 
-export type ProviderTrackStatus = 'verified' | 'endpoint_known' | 'pending' | 'not_x402'
+// probe_blocked: endpoint confirmed, but auth middleware blocks probe before reaching 402
+export type ProviderTrackStatus = 'verified' | 'endpoint_known' | 'probe_blocked' | 'pending' | 'not_x402'
 
 export type Provider = {
   name: string
@@ -22,9 +23,11 @@ const PROVIDERS: Provider[] = [
     category: '网页数据',
     chain: 'Base',
     payToAddress: null,
+    // POST endpoint confirmed; auth middleware runs before x402 middleware —
+    // probe returns 401 before reaching 402. payTo requires valid API key to reach x402 layer.
     endpoint: 'https://api.firecrawl.dev/v1/x402/search',
-    priceUsdc: null,
-    trackStatus: 'endpoint_known',
+    priceUsdc: 0.01,
+    trackStatus: 'probe_blocked',  // auth middleware fires before x402 middleware (401 before 402)
     lastCheckedAt: null,
   },
   {
