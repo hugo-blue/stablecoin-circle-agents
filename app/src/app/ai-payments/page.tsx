@@ -93,6 +93,11 @@ function fmt(n: number | null | undefined): string {
   return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n)
 }
 
+function fmtGrowth(pct: number | null | undefined): string {
+  if (pct == null) return ''
+  return pct >= 0 ? `+${pct}%` : `${pct}%`
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title, sub, badge }: { title: string; sub: string; badge?: string }) {
@@ -122,8 +127,8 @@ function TrackDot({ status }: { status: string }) {
 
 type DemandData = {
   openclaw: { stars: number | null }
-  agentkit: { stars: number | null; npmWeekly: number | null }
-  x402: { stars: number | null; npmWeekly: number | null; coinbaseX402Weekly: number | null }
+  agentkit: { stars: number | null; npmWeekly: number | null; npmMonthly: number | null; npmGrowthPct: number | null }
+  x402: { stars: number | null; npmWeekly: number | null; npmMonthly: number | null; npmGrowthPct: number | null; coinbaseX402Weekly: number | null; coinbaseX402Monthly: number | null }
   clawHub: { totalSkills: number; x402Skills: string[] }
 }
 
@@ -154,25 +159,27 @@ function DemandSection() {
             href="https://github.com/coinbase/x402"
           />
           <StatCard
-            label="x402 npm 周下载"
+            label="x402 npm 周/月下载"
             value={loading ? null : fmt(data?.x402.npmWeekly)}
-            sub="npmjs.com"
+            sub={loading ? 'npmjs.com' : `月 ${fmt(data?.x402.npmMonthly)}`}
+            growth={loading ? null : data?.x402.npmGrowthPct ?? null}
             loading={loading}
             href="https://www.npmjs.com/package/x402"
           />
           <StatCard
-            label="@coinbase/x402 周下载"
+            label="@coinbase/x402 周/月"
             value={loading ? null : fmt(data?.x402.coinbaseX402Weekly)}
-            sub="npmjs.com"
+            sub={loading ? 'npmjs.com' : `月 ${fmt(data?.x402.coinbaseX402Monthly)}`}
             loading={loading}
             href="https://www.npmjs.com/package/@coinbase/x402"
           />
           <StatCard
-            label="AgentKit Stars"
-            value={loading ? null : fmt(data?.agentkit.stars)}
-            sub="github.com/coinbase/agentkit"
+            label="AgentKit 周/月下载"
+            value={loading ? null : fmt(data?.agentkit.npmWeekly)}
+            sub={loading ? 'npmjs.com' : `月 ${fmt(data?.agentkit.npmMonthly)}`}
+            growth={loading ? null : data?.agentkit.npmGrowthPct ?? null}
             loading={loading}
-            href="https://github.com/coinbase/agentkit"
+            href="https://www.npmjs.com/package/@coinbase/agentkit"
           />
         </div>
       </div>
@@ -211,22 +218,30 @@ function DemandSection() {
           </div>
         </div>
         <p className="text-[11px] text-gray-400 mt-2">
-          AgentKit npm 周下载 {loading ? '…' : fmt(data?.agentkit.npmWeekly)} · x402 related skills 数量追踪中（需 ClawHub API 支持）
+          增长率 = 最近一周 vs 前三周均值。x402 skills 总数追踪中（需 ClawHub 开放 API）。
         </p>
       </div>
     </div>
   )
 }
 
-function StatCard({ label, value, sub, loading, href }: {
-  label: string; value: string | null; sub: string; loading: boolean; href?: string
+function StatCard({ label, value, sub, loading, href, growth }: {
+  label: string; value: string | null; sub: string; loading: boolean; href?: string; growth?: number | null
 }) {
+  const growthColor = growth == null ? '' : growth >= 0 ? 'text-green-600' : 'text-red-500'
   return (
     <div className="bg-gray-50 rounded-xl p-4">
       <p className="text-[10px] text-gray-400 mb-1">{label}</p>
       {loading
         ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-1" />
-        : <p className="text-xl font-bold text-black">{value ?? '—'}</p>
+        : (
+          <div className="flex items-baseline gap-2">
+            <p className="text-xl font-bold text-black">{value ?? '—'}</p>
+            {growth != null && (
+              <span className={`text-[11px] font-semibold ${growthColor}`}>{fmtGrowth(growth)} WoW</span>
+            )}
+          </div>
+        )
       }
       {href
         ? <a href={href} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">{sub}</a>
@@ -343,9 +358,9 @@ export default function AiPaymentsPage() {
 
         <ProvidersSection />
 
-        <p className="mt-3 text-[11px] text-gray-400">
-          * payTo 地址需对各服务商端点发起 HTTP 请求，从 402 响应头 <code className="bg-gray-100 px-1 rounded">X-Payment-Requirements</code> 中提取。地址确认后可在 Basescan 上追踪该地址的 USDC 收款记录。
-        </p>
+        <div className="mt-3 bg-amber-50 rounded-lg px-4 py-2.5 text-[11px] text-amber-700">
+          <span className="font-semibold">隐私结构性限制：</span> payTo 地址理论上可通过探针从 402 响应头抓取，但公司不会主动公告——地址公开即意味着链上收入透明。Firecrawl / Messari 等已探针 endpoint，地址确认后可在 Basescan 追踪 USDC 收款记录。
+        </div>
       </div>
 
       {/* ── 3. 协议对比 ────────────────────────────────────────────────────── */}
@@ -403,6 +418,9 @@ export default function AiPaymentsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="mt-2 bg-gray-100 rounded-lg px-3 py-2 text-[11px] text-gray-500">
+              <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。链上追踪 Facilitator 需确认其提交钱包地址（msg.sender），CDP Facilitator 提交地址未公开，待从已知 x402 交易中反向提取。
             </div>
           </div>
 

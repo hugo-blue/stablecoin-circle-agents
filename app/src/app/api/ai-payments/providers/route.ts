@@ -37,6 +37,17 @@ const PROVIDERS: Provider[] = [
     trackStatus: 'pending',
     lastCheckedAt: null,
   },
+  // 链上数据
+  {
+    name: 'Messari',
+    category: '链上数据',
+    chain: 'Base',
+    payToAddress: null,
+    endpoint: 'https://data.messari.io/api/v1/assets',  // x402 gate path TBD
+    priceUsdc: null,
+    trackStatus: 'endpoint_known',
+    lastCheckedAt: null,
+  },
   // 社交 & 链上数据
   {
     name: 'Neynar',
