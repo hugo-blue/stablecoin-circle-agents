@@ -37,20 +37,17 @@ export function extractPayToAddress(header: string | null | undefined): string |
 export function parseUsdcAmount(value: string): number {
   if (!value) throw new Error('Invalid USDC amount')
 
-  let n: bigint
-  try {
-    if (value.startsWith('0x') || value.startsWith('0X')) {
-      n = BigInt(value)
-    } else {
-      if (!/^-?\d+$/.test(value)) throw new Error('Invalid USDC amount')
-      n = BigInt(value)
-    }
-  } catch {
-    throw new Error('Invalid USDC amount')
+  let raw: number
+  if (value.startsWith('0x') || value.startsWith('0X')) {
+    raw = parseInt(value, 16)
+  } else {
+    // reject negatives and non-numeric strings
+    if (!/^\d+$/.test(value)) throw new Error('Invalid USDC amount')
+    raw = parseInt(value, 10)
   }
 
-  if (n < 0n) throw new Error('Invalid USDC amount')
-  return Number(n) / 1_000_000
+  if (isNaN(raw) || raw < 0) throw new Error('Invalid USDC amount')
+  return raw / 1_000_000
 }
 
 export function classifyX402Provider(address: string, registry: ProviderRegistry): ProviderInfo {
