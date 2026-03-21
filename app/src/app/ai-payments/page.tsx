@@ -343,17 +343,11 @@ export default function AiPaymentsPage() {
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="服务侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
 
-        <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 bg-orange-50 rounded-lg px-4 py-2.5 text-xs">
-          <span className="text-gray-500 font-medium">结算资产</span>
-          <span className="text-gray-600">Base 主网 USDC
-            <a href={`https://basescan.org/token/${BASE_USDC}`} target="_blank" rel="noopener noreferrer"
-              className="ml-1.5 font-mono text-blue-600 hover:underline">{BASE_USDC.slice(0, 6)}…{BASE_USDC.slice(-4)}</a>
-          </span>
-          <span className="text-gray-600">Solana USDC
-            <a href={`https://solscan.io/token/${SOLANA_USDC}`} target="_blank" rel="noopener noreferrer"
-              className="ml-1.5 font-mono text-blue-600 hover:underline">{SOLANA_USDC.slice(0, 6)}…{SOLANA_USDC.slice(-4)}</a>
-          </span>
-          <span className="text-orange-600 font-medium">↗ payTo 地址从 402 响应头抓取后可直接 Basescan 追踪</span>
+        <div className="mb-4 bg-blue-50 rounded-lg px-4 py-3 text-xs text-gray-600 leading-relaxed">
+          <span className="font-semibold text-gray-800">payTo 地址是什么？</span>
+          {' '}服务商在 Base / Solana 链上的<strong>收款钱包地址</strong>（如 <code className="bg-white px-1 rounded text-[10px]">0xABC...123</code>），包含在 HTTP 402 响应头 <code className="bg-white px-1 rounded text-[10px]">X-Payment-Requirements</code> 中。
+          每次 agent 付款 = 一笔 USDC Transfer 到该地址，在 Basescan 上永久可查。
+          <span className="ml-1 text-blue-600 font-medium">追踪路径：探针 endpoint → 从 402 响应头提取 payTo → Basescan 查该地址收款记录。</span>
         </div>
 
         <ProvidersSection />
@@ -425,7 +419,7 @@ export default function AiPaymentsPage() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">合约地址参考</p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">USDC 代币合约（结算资产，非 payTo）</p>
             <div className="space-y-1.5">
               {CONTRACT_ADDRS.map(c => (
                 <div key={c.net} className="bg-gray-50 rounded-lg px-3 py-2">
