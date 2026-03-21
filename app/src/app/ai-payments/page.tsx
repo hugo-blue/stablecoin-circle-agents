@@ -119,13 +119,55 @@ const TRACKING_METRICS = [
   { label: '累计支付笔数', value: '1亿+', note: '截至2026年3月', color: 'text-black' },
 ]
 
+// USDC contract on Base mainnet (used by all x402 providers)
+const BASE_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+const BASE_SEPOLIA_USDC = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+const SOLANA_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+const CDP_FACILITATOR = 'https://api.cdp.coinbase.com/platform/v2/x402'
+
 const KNOWN_PROVIDERS = [
-  { name: 'Alchemy Agentic Gateway', type: 'RPC / 区块链数据', chain: 'Base', facilitator: 'CDP', status: '待验证地址' },
-  { name: 'Firecrawl', type: '网页抓取', chain: 'Base', facilitator: 'CDP', status: '待验证地址' },
-  { name: 'Neynar', type: 'Farcaster 社交数据', chain: 'Base', facilitator: 'CDP', status: '待验证地址' },
-  { name: 'Pinata', type: 'IPFS 存储', chain: 'Base', facilitator: 'CDP', status: '待验证地址' },
-  { name: 'BlockRun.AI', type: 'LLM 推理网关', chain: 'Base', facilitator: 'CDP', status: '待验证地址' },
-  { name: 'Bitrefill', type: '礼品卡 / 电商', chain: 'EVM+Solana', facilitator: 'Bitrefill', status: '待验证地址' },
+  { name: 'Alchemy Agentic Gateway', type: 'RPC / 区块链数据', chain: 'Base', facilitator: 'CDP', endpoint: 'https://api.alchemy.com/v1/x402', status: '待抓取地址' },
+  { name: 'Firecrawl', type: '网页抓取', chain: 'Base', facilitator: 'CDP', endpoint: 'https://api.firecrawl.dev/v1/x402/search', status: '端点已知' },
+  { name: 'Neynar', type: 'Farcaster 社交数据', chain: 'Base', facilitator: 'CDP', endpoint: '—', status: '待抓取地址' },
+  { name: 'Pinata', type: 'IPFS 存储', chain: 'Base', facilitator: 'CDP', endpoint: '—', status: '待抓取地址' },
+  { name: 'BlockRun.AI', type: 'LLM 推理网关', chain: 'Base', facilitator: 'CDP', endpoint: '—', status: '待抓取地址' },
+  { name: 'Bitrefill', type: '礼品卡 / 电商', chain: 'EVM+Solana', facilitator: 'Bitrefill', endpoint: '—', status: '待抓取地址' },
+]
+
+const OPENCLAW_STATS = [
+  { label: 'GitHub Stars', value: '247,000+', note: '史上增速最快项目，超越 React', color: 'text-black' },
+  { label: '月活跃用户', value: '2,700万', note: '2026年3月，月增长 925%', color: 'text-black' },
+  { label: 'ClawHub 技能数', value: '13,729', note: '2026年2月28日数据', color: 'text-black' },
+  { label: '金融类技能', value: '311+', note: '含 DeFi / 加密支付 / 交易', color: 'text-black' },
+  { label: '企业用户占比', value: '65%', note: '其中金融行业 25%（最大板块）', color: 'text-black' },
+  { label: '用户满意度', value: '75%', note: '表示"超过满意"', color: 'text-black' },
+]
+
+const OPENCLAW_CRYPTO_SKILLS = [
+  {
+    name: 'CoinFello + MetaMask',
+    by: 'CoinFello / brettcleary',
+    desc: 'ERC-4337 智能账户 + ERC-7710 细粒度委托，支持 swap / 跨链 / staking / DeFi，私钥留在设备',
+    status: '已上线',
+    statusColor: 'bg-green-100 text-green-700',
+    link: 'github.com/openclaw/skills/.../coinfello',
+  },
+  {
+    name: 'BankrBot OpenClaw Skills',
+    by: 'BankrBot',
+    desc: 'Polymarket 预测市场、加密交易、DeFi 操作、自动化策略',
+    status: '已上线',
+    statusColor: 'bg-green-100 text-green-700',
+    link: 'github.com/BankrBot/openclaw-skills',
+  },
+  {
+    name: 'x402 支付技能（社区）',
+    by: 'Community',
+    desc: 'HTTP 402 自动支付响应，USDC on Base，agent 自主按需购买 API',
+    status: '开发中',
+    statusColor: 'bg-amber-100 text-amber-700',
+    link: '—',
+  },
 ]
 
 export default function AiPaymentsPage() {
@@ -260,10 +302,31 @@ export default function AiPaymentsPage() {
 
       {/* Section 5: Known x402 Providers */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-baseline gap-2 mb-4">
+        <div className="flex items-baseline gap-2 mb-1">
           <h3 className="text-lg font-semibold text-gray-900">已知 x402 服务商</h3>
-          <span className="text-xs text-gray-400">地址待验证，接入后可实时追踪支付流</span>
+          <span className="text-xs text-gray-400">payTo 地址从 402 响应头抓取，接入后实时追踪支付流</span>
         </div>
+
+        {/* USDC contract addresses */}
+        <div className="mb-4 mt-3 bg-gray-50 rounded-lg p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-gray-500 mb-2">USDC 合约地址（x402 结算资产）</p>
+          {[
+            { net: 'Base 主网', addr: BASE_USDC, scan: `https://basescan.org/token/${BASE_USDC}` },
+            { net: 'Base Sepolia', addr: BASE_SEPOLIA_USDC, scan: `https://sepolia.basescan.org/token/${BASE_SEPOLIA_USDC}` },
+            { net: 'Solana', addr: SOLANA_USDC, scan: `https://solscan.io/token/${SOLANA_USDC}` },
+          ].map(({ net, addr, scan }) => (
+            <div key={net} className="flex items-center gap-2 text-xs">
+              <span className="w-20 text-gray-500 flex-shrink-0">{net}</span>
+              <a href={scan} target="_blank" rel="noopener noreferrer"
+                className="font-mono text-blue-600 hover:underline truncate">{addr}</a>
+            </div>
+          ))}
+          <div className="flex items-center gap-2 text-xs mt-1 pt-1 border-t border-gray-200">
+            <span className="w-20 text-gray-500 flex-shrink-0">CDP 端点</span>
+            <span className="font-mono text-gray-600 truncate">{CDP_FACILITATOR}</span>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -271,7 +334,7 @@ export default function AiPaymentsPage() {
                 <th className="text-left py-2 px-2 text-gray-400 font-medium">服务商</th>
                 <th className="text-left py-2 px-2 text-gray-400 font-medium">类型</th>
                 <th className="text-left py-2 px-2 text-gray-400 font-medium">链</th>
-                <th className="text-left py-2 px-2 text-gray-400 font-medium">Facilitator</th>
+                <th className="text-left py-2 px-2 text-gray-400 font-medium">x402 端点</th>
                 <th className="text-left py-2 px-2 text-gray-400 font-medium">状态</th>
               </tr>
             </thead>
@@ -281,14 +344,67 @@ export default function AiPaymentsPage() {
                   <td className="py-2 px-2 font-medium text-gray-700">{p.name}</td>
                   <td className="py-2 px-2 text-gray-500">{p.type}</td>
                   <td className="py-2 px-2 text-gray-500">{p.chain}</td>
-                  <td className="py-2 px-2 text-gray-500">{p.facilitator}</td>
+                  <td className="py-2 px-2 font-mono text-[11px] text-gray-400 max-w-[200px] truncate">{p.endpoint}</td>
                   <td className="py-2 px-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{p.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      p.status === '端点已知' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                    }`}>{p.status}</span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Section 6: OpenClaw Ecosystem */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div className="flex items-baseline gap-2 mb-1">
+          <h3 className="text-lg font-semibold text-gray-900">OpenClaw 生态</h3>
+          <span className="text-xs text-gray-400">史上增速最快开源项目，支付能力由社区 skill 驱动</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          2026年2月创始人加入 OpenAI 后移交开源基金会。官方核心仍是 API Key 模式，链上支付能力从社区 skill 层渗透。
+        </p>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+          {OPENCLAW_STATS.map(item => (
+            <div key={item.label} className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-500">{item.label}</p>
+              <p className={`text-lg font-semibold mt-0.5 ${item.color}`}>{item.value}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">{item.note}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Crypto payment skills */}
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-2">链上支付相关 Skills</p>
+          <div className="space-y-2">
+            {OPENCLAW_CRYPTO_SKILLS.map(s => (
+              <div key={s.name} className="flex items-start justify-between gap-3 bg-gray-50 rounded-lg px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-semibold text-gray-800">{s.name}</p>
+                    <span className="text-[10px] text-gray-400">by {s.by}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{s.desc}</p>
+                </div>
+                <span className={`flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full ${s.statusColor}`}>{s.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Key insight */}
+        <div className="mt-4 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
+          <p className="text-xs text-amber-800">
+            <span className="font-semibold">核心观察：</span>
+            65% 用户来自企业，金融行业占比最高（25%），但官方支付仍是信用卡+API Key。
+            链上支付从 CoinFello、BankrBot 等社区 skill 外围渗透，
+            尚未进入官方核心。这是整个 agent 支付生态"基础设施就绪、需求侧尚未引爆"的缩影。
+          </p>
         </div>
       </div>
     </div>
