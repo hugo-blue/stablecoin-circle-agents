@@ -16,7 +16,31 @@ export type Provider = {
 }
 
 // Static registry — payToAddress populated once probed via 402 response header
+// V2 note: most production servers use Dynamic payTo routing (Facilitator address, not direct wallet).
+// Probe may return Facilitator address rather than server's own wallet.
 const PROVIDERS: Provider[] = [
+  // AI Agent 生态（x402scan Top 1 — 77% of daily volume, ACP-x402 convergence already live）
+  {
+    name: 'Virtuals Protocol',
+    category: 'AI Agent生态',
+    chain: 'Base',
+    payToAddress: null,
+    endpoint: 'https://acp-x402.virtuals.io',
+    priceUsdc: null,
+    trackStatus: 'endpoint_known',  // x402scan confirms live: 50K+ daily txns
+    lastCheckedAt: null,
+  },
+  // DeFi 交易工具
+  {
+    name: 'SniperX',
+    category: 'DeFi交易',
+    chain: 'Base',
+    payToAddress: null,
+    endpoint: 'https://x402.sniperx.fun',
+    priceUsdc: 0.02,
+    trackStatus: 'endpoint_known',  // x402scan: 5.22K daily txns, 12 buyers (专业 Bot)
+    lastCheckedAt: null,
+  },
   // 网页数据
   {
     name: 'Firecrawl',
@@ -42,6 +66,16 @@ const PROVIDERS: Provider[] = [
   },
   // 链上数据
   {
+    name: 'Nansen',
+    category: '链上数据',
+    chain: 'Base',
+    payToAddress: null,
+    endpoint: 'https://api.nansen.ai',  // x402scan #10: 638 daily txns confirmed
+    priceUsdc: null,
+    trackStatus: 'endpoint_known',
+    lastCheckedAt: null,
+  },
+  {
     name: 'Messari',
     category: '链上数据',
     chain: 'Base',
@@ -49,17 +83,6 @@ const PROVIDERS: Provider[] = [
     endpoint: 'https://data.messari.io/api/v1/assets',  // x402 gate path TBD
     priceUsdc: null,
     trackStatus: 'endpoint_known',
-    lastCheckedAt: null,
-  },
-  // 社交 & 链上数据
-  {
-    name: 'Neynar',
-    category: '社交数据',
-    chain: 'Base',
-    payToAddress: null,
-    endpoint: null,
-    priceUsdc: null,
-    trackStatus: 'pending',
     lastCheckedAt: null,
   },
   {
@@ -82,15 +105,26 @@ const PROVIDERS: Provider[] = [
     trackStatus: 'pending',
     lastCheckedAt: null,
   },
+  // 社交数据
+  {
+    name: 'Neynar',
+    category: '社交数据',
+    chain: 'Base',
+    payToAddress: null,
+    endpoint: null,
+    priceUsdc: null,
+    trackStatus: 'pending',
+    lastCheckedAt: null,
+  },
   // AI 推理
   {
     name: 'BlockRun.AI',
     category: 'AI推理',
     chain: 'Base',
     payToAddress: null,
-    endpoint: null,
+    endpoint: 'https://blockrun.ai',  // x402scan #5: 2.83K daily txns, $215.65 volume
     priceUsdc: null,
-    trackStatus: 'pending',
+    trackStatus: 'endpoint_known',
     lastCheckedAt: null,
   },
   {

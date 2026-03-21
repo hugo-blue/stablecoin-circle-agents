@@ -43,6 +43,8 @@ const NEWS_PLACEHOLDER = [
 // ─── 辅助 ────────────────────────────────────────────────────────────────────
 
 const CATEGORY_STYLE: Record<string, { dot: string }> = {
+  'AI Agent生态': { dot: 'bg-yellow-400' },
+  'DeFi交易':  { dot: 'bg-red-400' },
   '网页数据':  { dot: 'bg-blue-400' },
   '社交数据':  { dot: 'bg-purple-400' },
   '链上数据':  { dot: 'bg-purple-400' },
@@ -52,12 +54,15 @@ const CATEGORY_STYLE: Record<string, { dot: string }> = {
 }
 
 const PROVIDER_DESC: Record<string, string> = {
+  'Virtuals Protocol': 'x402scan #1 · 日均 5万+ 笔 · ACP-x402 已融合上线',
+  'SniperX':     'x402scan #3 · 专业交易 Bot · 高频链上套利',
   'Firecrawl':   '网页抓取，LLM-ready 数据',
   'Zyte API':    '企业级网页提取服务',
+  'Nansen':      'x402scan #10 · 链上分析，传统 SaaS 接入 x402 验证',
   'Neynar':      'Farcaster 社交图谱，agent 友好',
   'Einstein AI': '链上巨鲸追踪、DEX 分析、MEV',
   'WalletIQ':    '钱包情报 API',
-  'BlockRun.AI': 'LLM 网关，按调用计费',
+  'BlockRun.AI': 'x402scan #5 · 日均 2.8K 笔 · 链上监控 / LLM 网关',
   'AskClaude':   '按问题付费',
   'Obol':        'AI 代码生成',
   'Pinata':      'IPFS 上传，无需账户',
@@ -344,17 +349,48 @@ export default function AiPaymentsPage() {
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="服务侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
 
+        {/* x402scan 生态快照 */}
+        <div className="mb-4 bg-gray-50 rounded-lg px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">x402scan 独立链上索引 · 快照 2026-03-21</p>
+            <a href="https://x402scan.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">实时榜单 ↗</a>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+            <div className="bg-white rounded-lg px-3 py-2 text-center">
+              <p className="text-[10px] text-gray-400 mb-0.5">官方月交易量</p>
+              <p className="text-lg font-bold text-black">75.4M</p>
+              <p className="text-[10px] text-gray-400">x402.org Facilitator 上报</p>
+            </div>
+            <div className="bg-white rounded-lg px-3 py-2 text-center">
+              <p className="text-[10px] text-gray-400 mb-0.5">x402scan 24h 笔数</p>
+              <p className="text-lg font-bold text-black">65.3K</p>
+              <p className="text-[10px] text-gray-400">链上独立验证</p>
+            </div>
+            <div className="bg-white rounded-lg px-3 py-2 text-center">
+              <p className="text-[10px] text-gray-400 mb-0.5">24h 成交额</p>
+              <p className="text-lg font-bold text-black">$67.4K</p>
+              <p className="text-[10px] text-gray-400">834 sellers · 3.77K buyers</p>
+            </div>
+            <div className="bg-white rounded-lg px-3 py-2 text-center">
+              <p className="text-[10px] text-gray-400 mb-0.5">最大 Server</p>
+              <p className="text-sm font-bold text-black leading-tight">Virtuals Protocol</p>
+              <p className="text-[10px] text-gray-400">占 77% 流量</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-400">官方数据约为 x402scan 的 5-10 倍（含 Facilitator 私下上报）。Buyers 少 = 买家几乎全是 AI Agent（高度匿名化）。</p>
+        </div>
+
         <div className="mb-4 bg-blue-50 rounded-lg px-4 py-3 text-xs text-gray-600 leading-relaxed">
           <span className="font-semibold text-gray-800">payTo 地址是什么？</span>
-          {' '}服务商在 Base / Solana 链上的<strong>收款钱包地址</strong>（如 <code className="bg-white px-1 rounded text-[10px]">0xABC...123</code>），包含在 HTTP 402 响应头 <code className="bg-white px-1 rounded text-[10px]">X-Payment-Requirements</code> 中。
-          每次 agent 付款 = 一笔 USDC Transfer 到该地址，在 Basescan 上永久可查。
-          <span className="ml-1 text-blue-600 font-medium">追踪路径：探针 endpoint → 从 402 响应头提取 payTo → Basescan 查该地址收款记录。</span>
+          {' '}服务商的<strong>收款钱包地址</strong>，包含在 HTTP 402 响应头 <code className="bg-white px-1 rounded text-[10px]">X-Payment-Requirements</code> 中。
+          每次 agent 付款 = 一笔 USDC Transfer，在 Basescan 永久可查。
+          <span className="ml-1 text-blue-600 font-medium">V2（2025.12）引入 Dynamic payTo 路由：探针拿到的通常是 Facilitator 地址，而非服务商自己的钱包——隐私问题已基本被架构解决。</span>
         </div>
 
         <ProvidersSection />
 
         <div className="mt-3 bg-amber-50 rounded-lg px-4 py-2.5 text-[11px] text-amber-700">
-          <span className="font-semibold">隐私结构性限制：</span> payTo 地址理论上可通过探针从 402 响应头抓取，但公司不会主动公告——地址公开即意味着链上收入透明。Firecrawl / Messari 等已探针 endpoint，地址确认后可在 Basescan 追踪 USDC 收款记录。
+          <span className="font-semibold">V2 隐私机制：</span> 90%+ 生产服务商使用 Facilitator（payTo → Facilitator 地址，批量提现），70%+ 使用 Dynamic payTo per-request 子地址。原始服务商钱包几乎不暴露。Firecrawl 探针被拦截（401 先于 402）是 auth 中间件在 x402 中间件之前的架构选择。
         </div>
       </div>
 
@@ -387,12 +423,13 @@ export default function AiPaymentsPage() {
         <div className="mt-4 bg-purple-50 rounded-lg px-4 py-3 text-xs">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-700 text-[10px] font-medium">法币轨道</span>
+            <span className="px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-[10px] font-medium">ACP-x402 融合已上线</span>
             <span className="font-semibold text-gray-700">ACP / Instant Checkout 用户流程</span>
           </div>
           <p className="text-gray-500 leading-relaxed">
             用户在 ChatGPT 表达购买意图 → agent 向商家 ACP 端点请求购物车 → Stripe 嵌入式 UI 弹出（卡号输入给 Stripe，<strong>不传给 ChatGPT</strong>）→ Stripe 生成单次限额 SPT（Shared Payment Token）→ agent 用 SPT 完成结账。老用户通过 Stripe Link 存储的卡可一键完成。<span className="text-purple-600 font-medium">底层是信用卡 / Apple Pay，非稳定币。</span>
           </p>
-          <p className="text-gray-400 mt-1">ChatGPT / Perplexity / Copilot / Cursor 等均走此轨道，代表法币 agent 商务规模，与 x402 USDC 轨道平行发展。</p>
+          <p className="text-gray-400 mt-1">ChatGPT / Perplexity / Copilot / Cursor 等均走此轨道。<strong className="text-gray-500">Virtuals Protocol 已将 ACP 与 x402 融合</strong>（acp-x402.virtuals.io），实现"消费层 ACP + 结算层 x402 USDC"双轨合一——这是未来"ACP over x402"架构的现实先例，而非预测。</p>
         </div>
       </div>
 
