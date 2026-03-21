@@ -45,3 +45,7 @@ scripts/node_modules/
 !app/README.md
 !README.md
 !docs/**/*.md
+!CLAUDE.md
+!stablecoin-prd.md
+!test-completeness.md
+!circle-product-ecosystem.md
