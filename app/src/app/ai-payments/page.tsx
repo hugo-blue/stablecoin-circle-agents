@@ -3,54 +3,12 @@
 import { useState, useEffect } from 'react'
 import type { Provider } from '@/app/api/ai-payments/providers/route'
 
-// ─── 需求侧（静态，无 live API）────────────────────────────────────────────────
-
-const DEMAND_NATIVE = [
-  {
-    name: 'OpenClaw',
-    type: '开源 AI Agent 框架',
-    stars: '247,000+',
-    mau: '2,700万',
-    payStatus: 'skill 层集成',
-    payNote: 'CoinFello+MetaMask skill 已上线，官方核心仍 API Key',
-    statusColor: 'bg-amber-100 text-amber-700',
-    source: 'github.com/openclaw/openclaw',
-  },
-  {
-    name: 'Coinbase AgentKit',
-    type: 'Agent SDK + Embedded Wallet',
-    stars: '4,200+',
-    mau: '—',
-    payStatus: 'x402 原生',
-    payNote: 'Agentic Wallets 2026年2月上线，CDP 原生支持 x402',
-    statusColor: 'bg-green-100 text-green-700',
-    source: 'github.com/coinbase/agentkit',
-  },
-  {
-    name: 'Bino',
-    type: '自主 AI Agent 框架',
-    stars: '—',
-    mau: '—',
-    payStatus: 'x402 原生',
-    payNote: '以消费付费服务为核心设计，x402 生态目录已收录',
-    statusColor: 'bg-green-100 text-green-700',
-    source: 'x402.org/ecosystem',
-  },
-]
-
-const DEMAND_POTENTIAL = [
-  { name: 'ChatGPT', by: 'OpenAI', mau: '3亿+', payProtocol: 'ACP / SPT', payStatus: 'Instant Checkout 上线', statusColor: 'bg-green-100 text-green-700', note: 'Stripe ACP，已可在 ChatGPT 内购买 Etsy/Shopify 商品' },
-  { name: 'Perplexity', by: 'Perplexity AI', mau: '1,500万+', payProtocol: 'ACP / SPT', payStatus: 'ACP 合作方', statusColor: 'bg-blue-100 text-blue-700', note: 'Stripe ACP 官方合作方，购物 agent 功能开发中' },
-  { name: 'Microsoft Copilot', by: 'Microsoft', mau: '数亿（Office 嵌入）', payProtocol: 'ACP / SPT', payStatus: 'ACP 合作方', statusColor: 'bg-blue-100 text-blue-700', note: 'Stripe ACP 合作，企业采购 agent 场景' },
-  { name: 'Cursor / Replit / Bolt', by: '各自独立', mau: '数百万（开发者）', payProtocol: 'ACP / SPT', payStatus: 'ACP 合作方', statusColor: 'bg-blue-100 text-blue-700', note: 'Stripe ACP 合作方，开发者工具 agent 化后的支付场景' },
-]
-
 // ─── 协议对比（静态）────────────────────────────────────────────────────────────
 
 const PROTOCOLS = [
   { name: 'x402', by: 'Coinbase', layer: '执行层', settlement: '链上 USDC', scene: 'API / 开发者 / crypto-native', live: true, color: 'border-l-orange-400' },
   { name: 'AP2', by: 'Google', layer: '授权层', settlement: '支付无关（全轨道）', scene: '企业 agent 授权链路', live: false, color: 'border-l-blue-400' },
-  { name: 'ACP / SPT', by: 'Stripe + OpenAI', layer: '商务层', settlement: '法币优先', scene: '消费者 agent 购物', live: true, color: 'border-l-purple-400' },
+  { name: 'ACP / SPT', by: 'Stripe + OpenAI', layer: '商务层', settlement: '法币（信用卡 / Stripe Link）', scene: '消费者 agent 购物', live: true, color: 'border-l-purple-400' },
   { name: 'MPP', by: 'Tempo (Stripe+Paradigm)', layer: '基础链', settlement: '法币 + 链上双轨', scene: '高频 M2M 微支付', live: true, color: 'border-l-gray-400' },
 ]
 
@@ -113,7 +71,9 @@ const TRACK_STATUS_LABEL: Record<string, string> = {
   not_x402:       '非 x402',
 }
 
-function groupByCategory(providers: Provider[]) {
+type ProviderGroup = { category: string; items: Provider[] }
+
+function groupByCategory(providers: Provider[]): ProviderGroup[] {
   const map = new Map<string, Provider[]>()
   for (const p of providers) {
     const list = map.get(p.category) ?? []
@@ -126,6 +86,11 @@ function groupByCategory(providers: Provider[]) {
 function formatPrice(p: Provider): string {
   if (p.priceUsdc === null) return '—'
   return `$${p.priceUsdc}`
+}
+
+function fmt(n: number | null | undefined): string {
+  if (n == null) return '—'
+  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n)
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -153,56 +118,120 @@ function TrackDot({ status }: { status: string }) {
   )
 }
 
-// ─── x402 Stats Strip ─────────────────────────────────────────────────────────
+// ─── Demand Stats (live) ──────────────────────────────────────────────────────
 
-type X402Stats = {
-  dailyTxCount: number
-  dailyVolumeUsdc: number
-  baseVsSolanaRatio: number
-  activeFacilitators: number
-  totalEcosystemProjects: number
-  cumulativeTxCount: number
+type DemandData = {
+  openclaw: { stars: number | null }
+  agentkit: { stars: number | null; npmWeekly: number | null }
+  x402: { stars: number | null; npmWeekly: number | null; coinbaseX402Weekly: number | null }
+  clawHub: { totalSkills: number; x402Skills: string[] }
 }
 
-function StatsStrip() {
-  const [stats, setStats] = useState<X402Stats | null>(null)
-  const [state, setState] = useState<'loading' | 'success' | 'stale' | 'error'>('loading')
+function DemandSection() {
+  const [data, setData] = useState<DemandData | null>(null)
+  const [state, setState] = useState<'loading' | 'success' | 'partial' | 'error'>('loading')
 
   useEffect(() => {
-    fetch('/api/ai-payments/x402-stats')
+    fetch('/api/ai-payments/demand-stats')
       .then(r => r.json())
-      .then(body => {
-        setStats(body.data)
-        setState(body.state)
-      })
+      .then(body => { setData(body.data); setState(body.state) })
       .catch(() => setState('error'))
   }, [])
 
-  if (state === 'loading') {
-    return <div className="h-10 bg-gray-50 rounded-lg animate-pulse" />
-  }
-
-  if (state === 'error' || !stats) return null
+  const loading = state === 'loading'
 
   return (
-    <div className="bg-orange-50 rounded-xl px-5 py-3 flex flex-wrap gap-x-8 gap-y-1.5 items-center border border-orange-100">
-      <span className="text-xs font-semibold text-orange-700">x402 生态快照</span>
-      {state === 'stale' && <span className="text-[10px] text-orange-400 bg-orange-100 px-1.5 py-0.5 rounded">历史数据</span>}
-      <StatItem label="今日交易" value={stats.dailyTxCount.toLocaleString()} />
-      <StatItem label="今日量 USDC" value={`$${stats.dailyVolumeUsdc.toLocaleString()}`} />
-      <StatItem label="Base 占比" value={`${(stats.baseVsSolanaRatio * 100).toFixed(0)}%`} />
-      <StatItem label="活跃 Facilitator" value={String(stats.activeFacilitators)} />
-      <StatItem label="生态项目" value={String(stats.totalEcosystemProjects)} />
-      <StatItem label="累计交易" value={stats.cumulativeTxCount.toLocaleString()} />
+    <div className="space-y-5">
+      {/* x402 开发者生态 */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">x402 开发者生态 — live</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard
+            label="coinbase/x402 Stars"
+            value={loading ? null : fmt(data?.x402.stars)}
+            sub="GitHub"
+            loading={loading}
+            href="https://github.com/coinbase/x402"
+          />
+          <StatCard
+            label="x402 npm 周下载"
+            value={loading ? null : fmt(data?.x402.npmWeekly)}
+            sub="npmjs.com"
+            loading={loading}
+            href="https://www.npmjs.com/package/x402"
+          />
+          <StatCard
+            label="@coinbase/x402 周下载"
+            value={loading ? null : fmt(data?.x402.coinbaseX402Weekly)}
+            sub="npmjs.com"
+            loading={loading}
+            href="https://www.npmjs.com/package/@coinbase/x402"
+          />
+          <StatCard
+            label="AgentKit Stars"
+            value={loading ? null : fmt(data?.agentkit.stars)}
+            sub="github.com/coinbase/agentkit"
+            loading={loading}
+            href="https://github.com/coinbase/agentkit"
+          />
+        </div>
+      </div>
+
+      {/* OpenClaw + ClawHub */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">OpenClaw 生态 — live</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <StatCard
+            label="OpenClaw GitHub Stars"
+            value={loading ? null : fmt(data?.openclaw.stars)}
+            sub="全球最多 star 开源仓库"
+            loading={loading}
+            href="https://github.com/openclaw/openclaw"
+          />
+          <StatCard
+            label="ClawHub 总 Skills"
+            value={loading ? null : data ? `${data.clawHub.totalSkills.toLocaleString()}+` : '—'}
+            sub="clawhub.ai 官方注册表"
+            loading={loading}
+            href="https://clawhub.ai"
+          />
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">x402 接入 Skills（已验证）</p>
+            {loading
+              ? <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+              : (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {data?.clawHub.x402Skills.map(s => (
+                    <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">{s}</span>
+                  ))}
+                </div>
+              )
+            }
+            <p className="text-[10px] text-gray-400 mt-1.5">Messari: 链上数据按调用付费 · Breeze: 收益聚合器</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-gray-400 mt-2">
+          AgentKit npm 周下载 {loading ? '…' : fmt(data?.agentkit.npmWeekly)} · x402 related skills 数量追踪中（需 ClawHub API 支持）
+        </p>
+      </div>
     </div>
   )
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, sub, loading, href }: {
+  label: string; value: string | null; sub: string; loading: boolean; href?: string
+}) {
   return (
-    <div className="flex flex-col">
-      <span className="text-[10px] text-orange-500">{label}</span>
-      <span className="text-sm font-bold text-black">{value}</span>
+    <div className="bg-gray-50 rounded-xl p-4">
+      <p className="text-[10px] text-gray-400 mb-1">{label}</p>
+      {loading
+        ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-1" />
+        : <p className="text-xl font-bold text-black">{value ?? '—'}</p>
+      }
+      {href
+        ? <a href={href} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">{sub}</a>
+        : <p className="text-[10px] text-gray-400">{sub}</p>
+      }
     </div>
   )
 }
@@ -210,23 +239,19 @@ function StatItem({ label, value }: { label: string; value: string }) {
 // ─── Providers Section ────────────────────────────────────────────────────────
 
 function ProvidersSection() {
-  const [groups, setGroups] = useState<{ category: string; items: Provider[] }[]>([])
+  const [groups, setGroups] = useState<ProviderGroup[]>([])
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading')
 
   useEffect(() => {
     fetch('/api/ai-payments/providers')
       .then(r => r.json())
-      .then(body => {
-        setGroups(groupByCategory(body.data ?? []))
-        setState(body.state)
-      })
+      .then(body => { setGroups(groupByCategory(body.data ?? [])); setState(body.state) })
       .catch(() => setState('error'))
   }, [])
 
   if (state === 'loading') {
     return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 bg-gray-50 rounded animate-pulse" />)}</div>
   }
-
   if (state === 'error') {
     return <p className="text-xs text-red-400">加载服务商数据失败</p>
   }
@@ -262,9 +287,7 @@ function ProvidersSection() {
                       </td>
                       <td className="py-1.5 px-3 text-gray-500">{s.chain}</td>
                       <td className="py-1.5 px-3 font-medium text-gray-700">{formatPrice(s)}</td>
-                      <td className="py-1.5 px-3 font-mono text-[10px] text-gray-400">
-                        {s.endpoint ?? '—'}
-                      </td>
+                      <td className="py-1.5 px-3 font-mono text-[10px] text-gray-400">{s.endpoint ?? '—'}</td>
                       <td className="py-1.5 px-3 font-mono text-[10px] text-gray-300">
                         {s.payToAddress
                           ? `${s.payToAddress.slice(0, 6)}…${s.payToAddress.slice(-4)}`
@@ -295,64 +318,10 @@ export default function AiPaymentsPage() {
         <p className="text-sm text-gray-500 mt-1">需求侧 · 服务侧 · 协议对比 · 基础设施 — 动态追踪视角</p>
       </div>
 
-      <StatsStrip />
-
       {/* ── 1. 需求侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="需求侧" sub="谁在付钱 · 规模与支付就绪度" badge="可追踪" />
-
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">x402 原生 / 链上支付就绪</p>
-        <div className="space-y-2 mb-5">
-          {DEMAND_NATIVE.map(a => (
-            <div key={a.name} className="bg-gray-50 rounded-lg px-4 py-3 flex gap-4 items-start">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{a.name}</span>
-                  <span className="text-xs text-gray-400">{a.type}</span>
-                </div>
-                <p className="text-[11px] text-gray-500 mt-0.5">{a.payNote}</p>
-              </div>
-              <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                <TrackDot status={a.payStatus} />
-                <div className="flex gap-2 text-[10px] text-gray-400">
-                  {a.stars !== '—' && <span>⭐ {a.stars}</span>}
-                  {a.mau !== '—' && <span>MAU {a.mau}</span>}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">主流 AI 产品 — 支付就绪度追踪</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-2 pr-4 text-gray-400 font-medium">产品</th>
-                <th className="text-left py-2 px-3 text-gray-400 font-medium">MAU</th>
-                <th className="text-left py-2 px-3 text-gray-400 font-medium">支付协议</th>
-                <th className="text-left py-2 px-3 text-gray-400 font-medium">状态</th>
-                <th className="text-left py-2 px-3 text-gray-400 font-medium">说明</th>
-              </tr>
-            </thead>
-            <tbody>
-              {DEMAND_POTENTIAL.map(d => (
-                <tr key={d.name} className="border-b border-gray-50">
-                  <td className="py-2 pr-4">
-                    <p className="font-medium text-gray-800">{d.name}</p>
-                    <p className="text-gray-400">{d.by}</p>
-                  </td>
-                  <td className="py-2 px-3 text-gray-600">{d.mau}</td>
-                  <td className="py-2 px-3 font-medium text-gray-700">{d.payProtocol}</td>
-                  <td className="py-2 px-3">
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${d.statusColor}`}>{d.payStatus}</span>
-                  </td>
-                  <td className="py-2 px-3 text-gray-400 max-w-[220px]">{d.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SectionHeader title="需求侧" sub="x402 开发者生态 · OpenClaw · ClawHub" badge="Live API" />
+        <DemandSection />
       </div>
 
       {/* ── 2. 服务侧 ─────────────────────────────────────────────────────── */}
@@ -385,7 +354,7 @@ export default function AiPaymentsPage() {
         <div className="space-y-2">
           {PROTOCOLS.map(p => (
             <div key={p.name} className={`border-l-4 ${p.color} bg-gray-50 rounded-r-lg px-4 py-2.5 flex gap-4 items-center`}>
-              <div className="w-24 flex-shrink-0">
+              <div className="w-28 flex-shrink-0">
                 <p className="text-sm font-bold text-gray-900">{p.name}</p>
                 <p className="text-[10px] text-gray-400">{p.by}</p>
               </div>
@@ -402,6 +371,18 @@ export default function AiPaymentsPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ACP 说明 */}
+        <div className="mt-4 bg-purple-50 rounded-lg px-4 py-3 text-xs">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-700 text-[10px] font-medium">法币轨道</span>
+            <span className="font-semibold text-gray-700">ACP / Instant Checkout 用户流程</span>
+          </div>
+          <p className="text-gray-500 leading-relaxed">
+            用户在 ChatGPT 表达购买意图 → agent 向商家 ACP 端点请求购物车 → Stripe 嵌入式 UI 弹出（卡号输入给 Stripe，<strong>不传给 ChatGPT</strong>）→ Stripe 生成单次限额 SPT（Shared Payment Token）→ agent 用 SPT 完成结账。老用户通过 Stripe Link 存储的卡可一键完成。<span className="text-purple-600 font-medium">底层是信用卡 / Apple Pay，非稳定币。</span>
+          </p>
+          <p className="text-gray-400 mt-1">ChatGPT / Perplexity / Copilot / Cursor 等均走此轨道，代表法币 agent 商务规模，与 x402 USDC 轨道平行发展。</p>
         </div>
       </div>
 
