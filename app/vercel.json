@@ -1,4 +1,5 @@
 {
+  "alias": ["stablepulse.vercel.app"],
   "crons": [
     {
       "path": "/api/cron/refresh-rates",
