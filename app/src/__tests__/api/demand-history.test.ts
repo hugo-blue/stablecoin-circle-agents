@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET } from '@/app/api/ai-payments/demand-history/route'
+import { GET, clearCache } from '@/app/api/ai-payments/demand-history/route'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -14,15 +14,36 @@ function makeDailyData(startIso = '2025-10-01', days = 63) {
   return { downloads: result }
 }
 
+// 3 days ago and 10 days ago (for WoW star test)
+const recentStarredAt = new Date(Date.now() - 3 * 86400000).toISOString()
+const oldStarredAt = new Date(Date.now() - 10 * 86400000).toISOString()
+
+function makeFetch() {
+  return vi.fn().mockImplementation((url: string) => {
+    if (url.includes('api.github.com/repos') && !url.includes('stargazers')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ stargazers_count: 200 }) })
+    }
+    if (url.includes('stargazers')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([
+          { starred_at: recentStarredAt },
+          { starred_at: oldStarredAt },
+        ]),
+      })
+    }
+    // npm range API
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(makeDailyData()) })
+  })
+}
+
 // ─── contract: response shape ────────────────────────────────────────────────
 
 describe('GET /api/ai-payments/demand-history', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(makeDailyData()),
-    }))
+    clearCache()
+    vi.stubGlobal('fetch', makeFetch())
   })
 
   it('returns correct top-level shape', async () => {
@@ -78,9 +99,43 @@ describe('GET /api/ai-payments/demand-history', () => {
     }
   })
 
-  it('returns partial state when some packages fail', async () => {
+  it('starWoW field exists with required shape', async () => {
+    const res = await GET()
+    const body = await res.json()
+
+    expect(body.data).toHaveProperty('starWoW')
+    const { starWoW } = body.data
+    for (const key of ['x402', 'agentkit', 'openclaw']) {
+      if (starWoW[key] !== null) {
+        expect(typeof starWoW[key].lastWeek).toBe('number')
+        expect(typeof starWoW[key].prevWeek).toBe('number')
+        expect(starWoW[key].lastWeek).toBeGreaterThanOrEqual(0)
+        expect(starWoW[key].prevWeek).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('starWoW lastWeek counts only stars within 7 days', async () => {
+    const res = await GET()
+    const body = await res.json()
+
+    if (body.data.starWoW.x402 !== null) {
+      // Mock returns [recent(3d), old(10d)] for EACH of the 2 pages fetched
+      // → all = 4 items: 2 recent (lastWeek), 2 old (prevWeek)
+      expect(body.data.starWoW.x402.lastWeek).toBe(2)
+      expect(body.data.starWoW.x402.prevWeek).toBe(2)
+    }
+  })
+
+  it('returns partial state when some npm packages fail', async () => {
     let callCount = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url.includes('api.github.com')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ stargazers_count: 10 }) })
+      }
+      if (url.includes('stargazers')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
+      }
       callCount++
       if (callCount === 1) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(makeDailyData()) })

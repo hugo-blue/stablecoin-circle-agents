@@ -241,7 +241,18 @@ type DemandData = {
   clawHub: { totalSkills: number; x402Skills: string[] }
 }
 
-type HistoryData = { x402: WeeklyDownload[]; coinbaseX402: WeeklyDownload[]; agentkit: WeeklyDownload[] }
+type StarWoW = { lastWeek: number; prevWeek: number } | null
+type HistoryData = {
+  x402: WeeklyDownload[]
+  coinbaseX402: WeeklyDownload[]
+  agentkit: WeeklyDownload[]
+  starWoW: { x402: StarWoW; agentkit: StarWoW; openclaw: StarWoW }
+}
+
+function starWoWPct(s: StarWoW): number | null {
+  if (!s || s.prevWeek === 0) return null
+  return Math.round(((s.lastWeek - s.prevWeek) / s.prevWeek) * 100)
+}
 
 function DemandSection() {
   const [data, setData] = useState<DemandData | null>(null)
@@ -353,29 +364,36 @@ function DemandSection() {
           npm 下载量 = 构建 x402 服务端的开发者数量，是供给侧采用率的代理指标，不直接反映 agent 数量
         </p>
 
-        {/* GitHub Stars 行 */}
+        {/* GitHub Stars 行（含 WoW 新增） */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-          <StatCard
-            label="coinbase/x402 GitHub Stars"
-            value={loading ? null : fmt(data?.x402.stars)}
-            sub="x402 协议官方仓库"
-            loading={loading}
-            href="https://github.com/coinbase/x402"
-          />
-          <StatCard
-            label="coinbase/agentkit GitHub Stars"
-            value={loading ? null : fmt(data?.agentkit.stars)}
-            sub="Agent 构建 SDK 仓库"
-            loading={loading}
-            href="https://github.com/coinbase/agentkit"
-          />
-          <StatCard
-            label="openclaw/openclaw GitHub Stars"
-            value={loading ? null : fmt(data?.openclaw.stars)}
-            sub="Agent 运行时框架"
-            loading={loading}
-            href="https://github.com/openclaw/openclaw"
-          />
+          {[
+            { label: 'coinbase/x402 Stars', starsVal: data?.x402.stars, wow: history?.starWoW?.x402, href: 'https://github.com/coinbase/x402', sub: 'x402 协议官方仓库' },
+            { label: 'coinbase/agentkit Stars', starsVal: data?.agentkit.stars, wow: history?.starWoW?.agentkit, href: 'https://github.com/coinbase/agentkit', sub: 'Agent 构建 SDK' },
+            { label: 'openclaw Stars', starsVal: data?.openclaw.stars, wow: history?.starWoW?.openclaw, href: 'https://github.com/openclaw/openclaw', sub: 'Agent 运行时框架' },
+          ].map(({ label, starsVal, wow, href, sub }) => {
+            const wowPct = starWoWPct(wow ?? null)
+            const wowColor = wowPct == null ? '' : wowPct >= 0 ? 'text-green-600' : 'text-red-500'
+            return (
+              <div key={label} className="bg-gray-50 rounded-xl p-4">
+                <p className="text-[10px] text-gray-400 mb-1">{label}</p>
+                {loading
+                  ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-1" />
+                  : (
+                    <div className="flex items-baseline gap-2 mb-0.5">
+                      <p className="text-xl font-bold text-black">{fmt(starsVal)}</p>
+                      {wowPct != null && (
+                        <span className={`text-[11px] font-semibold ${wowColor}`}>{fmtGrowth(wowPct)} WoW</span>
+                      )}
+                    </div>
+                  )
+                }
+                {wow && (
+                  <p className="text-[10px] text-gray-400">本周新增 {wow.lastWeek} · 上周 {wow.prevWeek}</p>
+                )}
+                <a href={href} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">{sub}</a>
+              </div>
+            )
+          })}
         </div>
 
         {/* npm 趋势行（带 sparkline + WoW + MoM） */}
@@ -546,7 +564,7 @@ export default function AiPaymentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">AI Agent 支付生态</h1>
-        <p className="text-sm text-gray-500 mt-1">协议全景 · 需求侧 · 服务侧 · 基础设施 — 动态追踪视角</p>
+        <p className="text-sm text-gray-500 mt-1">协议全景 · Buyer 侧 · Seller 侧 · 基础设施 — 动态追踪视角</p>
       </div>
 
       {/* ── 1. 协议全景（顶部）──────────────────────────────────────────────── */}
@@ -610,13 +628,6 @@ export default function AiPaymentsPage() {
           ))}
         </div>
 
-        {/* 命名冲突说明 */}
-        <div className="mt-3 bg-amber-50 rounded-lg px-4 py-2.5 text-[11px] text-amber-800">
-          <span className="font-semibold">⚠ 命名冲突：Virtuals ACP ≠ Stripe ACP</span>
-          {' '}两者同名但完全不同协议。Stripe/OpenAI 的 ACP = 消费购物协议（法币轨道）。
-          Virtuals 的 ACP = <strong>Agent Commerce Protocol</strong>——Agent 间自主雇佣 / 任务协调 / 4 阶段智能合约 escrow（稳定币轨道）。
-          Virtuals 独立设计了这套协议，并选择 x402 作为支付执行层，与 Stripe ACP 无关。
-        </div>
       </div>
 
       {/* ── 2. 架构说明 ─────────────────────────────────────────────────────── */}
@@ -638,7 +649,7 @@ export default function AiPaymentsPage() {
             ))}
           </div>
           <p className="text-[10px] text-gray-400 text-center">
-            同一个 Agent 可同时扮演两侧角色 · Seller 收 90%，10% 进 ACP Treasury · Firecrawl / Nansen 等外部 API 也是 Seller 侧
+            同一个 Agent 可同时扮演两侧角色 · Firecrawl / Nansen 等传统 API 也是 Seller 侧 · 分润规则由各协议自定义
           </p>
         </div>
 
@@ -663,15 +674,15 @@ export default function AiPaymentsPage() {
         </div>
       </div>
 
-      {/* ── 3. 需求侧 ─────────────────────────────────────────────────────── */}
+      {/* ── 3. Buyer 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="需求侧" sub="AI Agent 生态 · 开发者采用率" badge="Live API" />
+        <SectionHeader title="Buyer 侧" sub="AI Agent 生态 · 开发者采用率" badge="Live API" />
         <DemandSection />
       </div>
 
-      {/* ── 4. 服务侧 ─────────────────────────────────────────────────────── */}
+      {/* ── 4. Seller 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="服务侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
+        <SectionHeader title="Seller 侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
 
         {/* x402scan 生态快照 */}
         <div className="mb-4 bg-gray-50 rounded-lg px-4 py-3">
