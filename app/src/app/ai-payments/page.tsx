@@ -2,14 +2,55 @@
 
 import { useState, useEffect } from 'react'
 import type { Provider } from '@/app/api/ai-payments/providers/route'
+import type { WeeklyDownload } from '@/app/api/ai-payments/demand-history/route'
 
-// ─── 协议对比（静态）────────────────────────────────────────────────────────────
+// ─── 协议全景（静态）────────────────────────────────────────────────────────────
 
 const PROTOCOLS = [
-  { name: 'x402', by: 'Coinbase', layer: '执行层', settlement: '链上 USDC', scene: 'API / 开发者 / crypto-native', live: true, color: 'border-l-orange-400' },
-  { name: 'AP2', by: 'Google', layer: '授权层', settlement: '支付无关（全轨道）', scene: '企业 agent 授权链路', live: false, color: 'border-l-blue-400' },
-  { name: 'ACP / SPT', by: 'Stripe + OpenAI', layer: '商务层', settlement: '法币（信用卡 / Stripe Link）', scene: '消费者 agent 购物', live: true, color: 'border-l-purple-400' },
-  { name: 'MPP', by: 'Tempo (Stripe+Paradigm)', layer: '基础链', settlement: '法币 + 链上双轨', scene: '高频 M2M 微支付', live: true, color: 'border-l-gray-400' },
+  {
+    name: 'x402',
+    by: 'Coinbase',
+    track: '稳定币轨道',
+    trackColor: 'bg-orange-100 text-orange-700',
+    layer: '执行层',
+    settlement: 'Base 链 USDC（链上不可逆）',
+    scene: 'M2M 微支付 · API 按调用计费 · < $0.01',
+    live: true,
+    color: 'border-l-orange-400',
+  },
+  {
+    name: 'ACP / SPT',
+    by: 'Stripe + OpenAI',
+    track: '法币轨道',
+    trackColor: 'bg-purple-100 text-purple-700',
+    layer: '商务层',
+    settlement: '法币（信用卡 / Apple Pay）',
+    scene: '消费者 agent 购物 · 对话式电商 · 退款可撤销',
+    live: true,
+    color: 'border-l-purple-400',
+  },
+  {
+    name: 'AP2',
+    by: 'Google',
+    track: '兼容层',
+    trackColor: 'bg-blue-100 text-blue-700',
+    layer: '授权层',
+    settlement: '支付无关（兼容 x402 / ACP 双轨）',
+    scene: '企业级 agent 授权链路 · 60+ 机构背书',
+    live: false,
+    color: 'border-l-blue-400',
+  },
+  {
+    name: 'MPP',
+    by: 'Tempo (Stripe+Paradigm)',
+    track: '双轨',
+    trackColor: 'bg-gray-100 text-gray-600',
+    layer: '基础链',
+    settlement: '法币 + 链上双轨',
+    scene: '高频 M2M 微支付 · 2026.3 主网上线',
+    live: true,
+    color: 'border-l-gray-400',
+  },
 ]
 
 // ─── 基础设施（静态）────────────────────────────────────────────────────────────
@@ -31,8 +72,6 @@ const CONTRACT_ADDRS = [
   { net: 'Base Sepolia', token: 'USDC (测试)', addr: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', scan: 'https://sepolia.basescan.org' },
 ]
 
-// ─── 最新进展（静态预留）────────────────────────────────────────────────────────
-
 const NEWS_PLACEHOLDER = [
   { date: '2026-03-18', title: 'Tempo (Stripe+Paradigm) 主网上线，MPP 协议正式发布', tags: ['MPP', 'Stripe', '主网'], source: 'Fortune' },
   { date: '2026-03-11', title: 'Ramp 推出 Agent Cards，企业 AI agent 可申请虚拟 Visa 卡', tags: ['动态预算', 'Web2', 'Ramp'], source: 'StableDash' },
@@ -44,13 +83,13 @@ const NEWS_PLACEHOLDER = [
 
 const CATEGORY_STYLE: Record<string, { dot: string }> = {
   'AI Agent生态': { dot: 'bg-yellow-400' },
-  'DeFi交易':  { dot: 'bg-red-400' },
-  '网页数据':  { dot: 'bg-blue-400' },
-  '社交数据':  { dot: 'bg-purple-400' },
-  '链上数据':  { dot: 'bg-purple-400' },
-  'AI推理':   { dot: 'bg-orange-400' },
-  '存储':     { dot: 'bg-green-400' },
-  '电商':     { dot: 'bg-green-400' },
+  'DeFi交易':    { dot: 'bg-red-400' },
+  '网页数据':    { dot: 'bg-blue-400' },
+  '社交数据':    { dot: 'bg-purple-400' },
+  '链上数据':    { dot: 'bg-purple-400' },
+  'AI推理':      { dot: 'bg-orange-400' },
+  '存储':        { dot: 'bg-green-400' },
+  '电商':        { dot: 'bg-green-400' },
 }
 
 const PROVIDER_DESC: Record<string, string> = {
@@ -104,6 +143,35 @@ function fmtGrowth(pct: number | null | undefined): string {
   return pct >= 0 ? `+${pct}%` : `${pct}%`
 }
 
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+
+function Sparkline({ data }: { data: WeeklyDownload[] }) {
+  if (data.length < 2) return <span className="text-gray-300 text-[10px]">—</span>
+  const values = data.map(d => d.downloads)
+  const max = Math.max(...values)
+  const min = Math.min(...values)
+  const range = max - min || 1
+  const W = 72, H = 22
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W
+    const y = H - ((v - min) / range) * (H - 4) - 2
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  const rising = values[values.length - 1] >= values[0]
+  return (
+    <svg width={W} height={H} className="inline-block opacity-80">
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={rising ? '#22c55e' : '#ef4444'}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title, sub, badge }: { title: string; sub: string; badge?: string }) {
@@ -129,108 +197,6 @@ function TrackDot({ status }: { status: string }) {
   )
 }
 
-// ─── Demand Stats (live) ──────────────────────────────────────────────────────
-
-type DemandData = {
-  openclaw: { stars: number | null }
-  agentkit: { stars: number | null; npmWeekly: number | null; npmMonthly: number | null; npmGrowthPct: number | null }
-  x402: { stars: number | null; npmWeekly: number | null; npmMonthly: number | null; npmGrowthPct: number | null; coinbaseX402Weekly: number | null; coinbaseX402Monthly: number | null }
-  clawHub: { totalSkills: number; x402Skills: string[] }
-}
-
-function DemandSection() {
-  const [data, setData] = useState<DemandData | null>(null)
-  const [state, setState] = useState<'loading' | 'success' | 'partial' | 'error'>('loading')
-
-  useEffect(() => {
-    fetch('/api/ai-payments/demand-stats')
-      .then(r => r.json())
-      .then(body => { setData(body.data); setState(body.state) })
-      .catch(() => setState('error'))
-  }, [])
-
-  const loading = state === 'loading'
-
-  return (
-    <div className="space-y-5">
-      {/* x402 开发者生态 */}
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">x402 开发者生态 — live</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard
-            label="coinbase/x402 Stars"
-            value={loading ? null : fmt(data?.x402.stars)}
-            sub="GitHub"
-            loading={loading}
-            href="https://github.com/coinbase/x402"
-          />
-          <StatCard
-            label="x402 npm 周/月下载"
-            value={loading ? null : fmt(data?.x402.npmWeekly)}
-            sub={loading ? 'npmjs.com' : `月 ${fmt(data?.x402.npmMonthly)}`}
-            growth={loading ? null : data?.x402.npmGrowthPct ?? null}
-            loading={loading}
-            href="https://www.npmjs.com/package/x402"
-          />
-          <StatCard
-            label="@coinbase/x402 周/月"
-            value={loading ? null : fmt(data?.x402.coinbaseX402Weekly)}
-            sub={loading ? 'npmjs.com' : `月 ${fmt(data?.x402.coinbaseX402Monthly)}`}
-            loading={loading}
-            href="https://www.npmjs.com/package/@coinbase/x402"
-          />
-          <StatCard
-            label="AgentKit 周/月下载"
-            value={loading ? null : fmt(data?.agentkit.npmWeekly)}
-            sub={loading ? 'npmjs.com' : `月 ${fmt(data?.agentkit.npmMonthly)}`}
-            growth={loading ? null : data?.agentkit.npmGrowthPct ?? null}
-            loading={loading}
-            href="https://www.npmjs.com/package/@coinbase/agentkit"
-          />
-        </div>
-      </div>
-
-      {/* OpenClaw + ClawHub */}
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">OpenClaw 生态 — live</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <StatCard
-            label="OpenClaw GitHub Stars"
-            value={loading ? null : fmt(data?.openclaw.stars)}
-            sub="全球最多 star 开源仓库"
-            loading={loading}
-            href="https://github.com/openclaw/openclaw"
-          />
-          <StatCard
-            label="ClawHub 总 Skills"
-            value={loading ? null : data ? `${data.clawHub.totalSkills.toLocaleString()}+` : '—'}
-            sub="clawhub.ai 官方注册表"
-            loading={loading}
-            href="https://clawhub.ai"
-          />
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-[10px] text-gray-400 mb-1">x402 接入 Skills（已验证）</p>
-            {loading
-              ? <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
-              : (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {data?.clawHub.x402Skills.map(s => (
-                    <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">{s}</span>
-                  ))}
-                </div>
-              )
-            }
-            <p className="text-[10px] text-gray-400 mt-1.5">Messari: 链上数据按调用付费 · Breeze: 收益聚合器</p>
-          </div>
-        </div>
-        <p className="text-[11px] text-gray-400 mt-2">
-          增长率 = 最近一周 vs 前三周均值。x402 skills 总数追踪中（需 ClawHub 开放 API）。
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function StatCard({ label, value, sub, loading, href, growth }: {
   label: string; value: string | null; sub: string; loading: boolean; href?: string; growth?: number | null
 }) {
@@ -253,6 +219,200 @@ function StatCard({ label, value, sub, loading, href, growth }: {
         ? <a href={href} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">{sub}</a>
         : <p className="text-[10px] text-gray-400">{sub}</p>
       }
+    </div>
+  )
+}
+
+// ─── Demand Stats (live) ──────────────────────────────────────────────────────
+
+type DemandData = {
+  openclaw: { stars: number | null }
+  agentkit: { stars: number | null; npmWeekly: number | null; npmMonthly: number | null; npmGrowthPct: number | null }
+  x402: { stars: number | null; npmWeekly: number | null; npmMonthly: number | null; npmGrowthPct: number | null; coinbaseX402Weekly: number | null; coinbaseX402Monthly: number | null }
+  clawHub: { totalSkills: number; x402Skills: string[] }
+}
+
+type HistoryData = { x402: WeeklyDownload[]; coinbaseX402: WeeklyDownload[]; agentkit: WeeklyDownload[] }
+
+function DemandSection() {
+  const [data, setData] = useState<DemandData | null>(null)
+  const [state, setState] = useState<'loading' | 'success' | 'partial' | 'error'>('loading')
+  const [history, setHistory] = useState<HistoryData | null>(null)
+
+  useEffect(() => {
+    fetch('/api/ai-payments/demand-stats')
+      .then(r => r.json())
+      .then(body => { setData(body.data); setState(body.state) })
+      .catch(() => setState('error'))
+
+    fetch('/api/ai-payments/demand-history')
+      .then(r => r.json())
+      .then(body => { if (body.state !== 'error') setHistory(body.data) })
+      .catch(() => {})
+  }, [])
+
+  const loading = state === 'loading'
+
+  return (
+    <div className="space-y-6">
+
+      {/* ── AI Agent 生态（真正的需求侧） ─────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">AI Agent 生态 — 需求侧核心</p>
+        <p className="text-[11px] text-gray-400 mb-3">这些是真正的"付款方"——agent 通过 Skill 调用 x402-gated API，Facilitator 代付 USDC</p>
+
+        {/* OpenClaw 生态 */}
+        <div className="border border-gray-100 rounded-xl p-4 mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <p className="text-xs font-semibold text-gray-700">OpenClaw 生态（开放框架）</p>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">主流</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <StatCard
+              label="OpenClaw GitHub Stars"
+              value={loading ? null : fmt(data?.openclaw.stars)}
+              sub="openclaw/openclaw"
+              loading={loading}
+              href="https://github.com/openclaw/openclaw"
+            />
+            <StatCard
+              label="ClawHub 注册 Skills"
+              value={loading ? null : data ? `${data.clawHub.totalSkills.toLocaleString()}+` : '—'}
+              sub="clawhub.ai"
+              loading={loading}
+              href="https://clawhub.ai"
+            />
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-[10px] text-gray-400 mb-1">x402 接入 Skills（人工验证）</p>
+              {loading
+                ? <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                : (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {data?.clawHub.x402Skills.map(s => (
+                      <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">{s}</span>
+                    ))}
+                  </div>
+                )
+              }
+              <p className="text-[10px] text-gray-400 mt-1.5">x402 skill 总数追踪中（待 ClawHub 开放搜索 API）</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Virtuals Protocol */}
+        <div className="border border-gray-100 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-yellow-500" />
+            <p className="text-xs font-semibold text-gray-700">Virtuals Protocol（封闭生态）</p>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-700">ACP-x402 融合已上线</span>
+          </div>
+          <div className="text-[11px] text-gray-500 leading-relaxed mb-2">
+            Virtuals 的 AI 虚拟人 / 交易 bot（Luna、AIXBT 等）通过 <code className="bg-gray-100 px-1 rounded">acp-x402.virtuals.io</code> 网关支付 x402 服务——
+            ACP 请求 → x402 转换 → Base 链 USDC 结算。当前占 x402scan 日交易量 <strong className="text-gray-700">77%</strong>，
+            但属于封闭生态内循环，与 OpenClaw 的开放 skill 市场不同。
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-gray-400">x402scan 24h 笔数</p>
+              <p className="text-lg font-bold text-black">50.4K</p>
+              <p className="text-[10px] text-gray-400">3.3K buyers（全为 Agent）</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-gray-400">日成交额</p>
+              <p className="text-lg font-bold text-black">$79.5K</p>
+              <p className="text-[10px] text-gray-400">快照 2026-03-21</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-gray-400">生态定位</p>
+              <p className="text-sm font-bold text-black">封闭 → 开放</p>
+              <p className="text-[10px] text-gray-400">未来可能向 OpenClaw 迁移</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 协议开发者生态（供给侧代理指标） ──────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">协议开发者生态 — 供给侧代理指标</p>
+        <p className="text-[11px] text-gray-400 mb-3">
+          npm 下载量 = 构建 x402 服务端的开发者数量，是供给侧采用率的代理指标，不直接反映 agent 数量
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+          {/* x402 npm */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">x402 npm 周下载</p>
+            {loading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <div className="flex items-baseline gap-2 mb-2">
+                  <p className="text-xl font-bold text-black">{fmt(data?.x402.npmWeekly)}</p>
+                  {data?.x402.npmGrowthPct != null && (
+                    <span className={`text-[11px] font-semibold ${(data.x402.npmGrowthPct ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {fmtGrowth(data.x402.npmGrowthPct)} WoW
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            {history && <Sparkline data={history.x402} />}
+            <p className="text-[10px] text-gray-400 mt-1">
+              <a href="https://www.npmjs.com/package/x402" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">x402</a>
+              {' '}· 基础协议库 · 月 {fmt(data?.x402.npmMonthly)}
+            </p>
+          </div>
+
+          {/* @coinbase/x402 npm */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">@coinbase/x402 npm 周下载</p>
+            {loading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <p className="text-xl font-bold text-black mb-2">{fmt(data?.x402.coinbaseX402Weekly)}</p>
+              )
+            }
+            {history && <Sparkline data={history.coinbaseX402} />}
+            <p className="text-[10px] text-gray-400 mt-1">
+              <a href="https://www.npmjs.com/package/@coinbase/x402" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@coinbase/x402</a>
+              {' '}· 官方 SDK · 月 {fmt(data?.x402.coinbaseX402Monthly)}
+            </p>
+          </div>
+
+          {/* AgentKit npm */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">AgentKit npm 周下载</p>
+            {loading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <div className="flex items-baseline gap-2 mb-2">
+                  <p className="text-xl font-bold text-black">{fmt(data?.agentkit.npmWeekly)}</p>
+                  {data?.agentkit.npmGrowthPct != null && (
+                    <span className={`text-[11px] font-semibold ${(data.agentkit.npmGrowthPct ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {fmtGrowth(data.agentkit.npmGrowthPct)} WoW
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            {history && <Sparkline data={history.agentkit} />}
+            <p className="text-[10px] text-gray-400 mt-1">
+              <a href="https://www.npmjs.com/package/@coinbase/agentkit" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@coinbase/agentkit</a>
+              {' '}· Agent 构建 SDK · 含 x402 支付能力
+            </p>
+          </div>
+
+        </div>
+        <div className="mt-2 flex gap-4">
+          <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-400 hover:text-blue-500">
+            coinbase/x402 ★{fmt(data?.x402.stars)}
+          </a>
+          <a href="https://github.com/coinbase/agentkit" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-400 hover:text-blue-500">
+            coinbase/agentkit ★{fmt(data?.agentkit.stars)}
+          </a>
+        </div>
+      </div>
+
     </div>
   )
 }
@@ -336,16 +496,125 @@ export default function AiPaymentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">AI Agent 支付生态</h1>
-        <p className="text-sm text-gray-500 mt-1">需求侧 · 服务侧 · 协议对比 · 基础设施 — 动态追踪视角</p>
+        <p className="text-sm text-gray-500 mt-1">协议全景 · 需求侧 · 服务侧 · 基础设施 — 动态追踪视角</p>
       </div>
 
-      {/* ── 1. 需求侧 ─────────────────────────────────────────────────────── */}
+      {/* ── 1. 协议全景（顶部）──────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="需求侧" sub="x402 开发者生态 · OpenClaw · ClawHub" badge="Live API" />
+        <SectionHeader title="协议全景" sub="两条主轨道 · AP2 兼容层" />
+
+        {/* 两条主轨道说明 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <div className="bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-700 text-[10px] font-bold">稳定币轨道</span>
+              <span className="text-sm font-bold text-gray-800">x402 + USDC</span>
+            </div>
+            <p className="text-[11px] text-gray-600 leading-relaxed">
+              链上结算，不可逆，适合 <strong>M2M 微支付（&lt;$0.01/次）</strong>。AI Agent 通过 Skill 调用 x402-gated API，
+              Facilitator 在 Base 链代付 USDC。
+            </p>
+          </div>
+          <div className="bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-700 text-[10px] font-bold">法币轨道</span>
+              <span className="text-sm font-bold text-gray-800">ACP + Stripe</span>
+            </div>
+            <p className="text-[11px] text-gray-600 leading-relaxed">
+              信用卡 / Apple Pay，可退款，适合<strong>对话式电商（大额消费）</strong>。ChatGPT / Perplexity 走此轨道。
+              Stripe 生成 SPT（单次限额 Token），agent 代用户结账。
+            </p>
+          </div>
+        </div>
+
+        {/* AP2 兼容层 */}
+        <div className="mb-4 bg-blue-50 rounded-lg px-4 py-2.5 text-[11px] text-blue-700">
+          <span className="font-semibold">AP2（Google）兼容层：</span>
+          企业级 agent 授权协议，60+ 机构联合背书，设计为<strong>兼容 x402 与 ACP 双轨</strong>——上层协议无关支付方式，
+          可将 x402 微支付或 ACP 法币结算作为子协议接入。规范阶段，尚未主网上线。
+        </div>
+
+        {/* 协议对比表 */}
+        <div className="space-y-2">
+          {PROTOCOLS.map(p => (
+            <div key={p.name} className={`border-l-4 ${p.color} bg-gray-50 rounded-r-lg px-4 py-2.5 flex gap-4 items-center`}>
+              <div className="w-32 flex-shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-gray-900">{p.name}</p>
+                  <span className={`text-[9px] px-1 py-0.5 rounded ${p.trackColor} font-medium`}>{p.track}</span>
+                </div>
+                <p className="text-[10px] text-gray-400">{p.by}</p>
+              </div>
+              <div className="flex-1 grid grid-cols-3 gap-2 text-xs">
+                <div><span className="text-gray-400">层级</span><p className="text-gray-700 font-medium">{p.layer}</p></div>
+                <div><span className="text-gray-400">结算</span><p className="text-gray-700">{p.settlement}</p></div>
+                <div><span className="text-gray-400">核心场景</span><p className="text-gray-700">{p.scene}</p></div>
+              </div>
+              <div className="flex-shrink-0">
+                {p.live
+                  ? <span className="flex items-center gap-1 text-[10px] text-green-600"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />已上线</span>
+                  : <span className="flex items-center gap-1 text-[10px] text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />规范阶段</span>
+                }
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 融合已发生 */}
+        <div className="mt-3 bg-yellow-50 rounded-lg px-4 py-2.5 text-[11px] text-yellow-800">
+          <span className="font-semibold">ACP-x402 融合先例（已上线）：</span>
+          Virtuals Protocol 的 <code className="bg-white px-1 rounded text-[10px]">acp-x402.virtuals.io</code> 实现了
+          "消费层 ACP + 结算层 x402"——agent 发 ACP 商务请求，网关转换为 x402，Base 链 USDC 结算。
+          这是"ACP over x402"架构的现实先例，当前贡献 x402scan 77% 日流量。
+        </div>
+      </div>
+
+      {/* ── 2. 架构说明 ─────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <SectionHeader title="稳定币路径架构" sub="Agent → Skill → x402 → USDC 完整链路" />
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-center text-xs mb-4">
+          {[
+            { label: 'AI Agent', sub: 'OpenClaw / Virtuals / AgentKit', color: 'bg-blue-50 border-blue-200' },
+            { label: '↓ 调用 Skill', sub: 'ClawHub / 自定义 Tool', color: 'bg-gray-50 border-gray-200' },
+            { label: 'x402 服务端', sub: 'Firecrawl / Nansen / BlockRun 等', color: 'bg-orange-50 border-orange-200' },
+            { label: '↓ Facilitator', sub: 'Coinbase CDP 代付 · EIP-3009 签名', color: 'bg-gray-50 border-gray-200' },
+            { label: 'Base 链 USDC', sub: 'payTo 地址收款 · Basescan 可查', color: 'bg-green-50 border-green-200' },
+          ].map((s, i) => (
+            <div key={i} className={`rounded-lg border px-3 py-2.5 ${s.color}`}>
+              <p className="font-semibold text-gray-800">{s.label}</p>
+              <p className="text-gray-500 text-[10px] mt-0.5">{s.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+          <div className="bg-gray-50 rounded-lg px-4 py-3">
+            <p className="font-semibold text-gray-700 mb-1">x402 协议定位</p>
+            <p className="text-gray-500 leading-relaxed">
+              x402 本质是<strong>服务端协议</strong>——任何 API 在 HTTP 中间件加一层 402 即可收费。
+              需求侧（谁付钱）是 AI Agent 生态；供给侧（谁收钱）是 API 服务商。
+              npm 下载量衡量的是<strong>开发者构建服务端</strong>的速度，不是 agent 数量。
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg px-4 py-3">
+            <p className="font-semibold text-gray-700 mb-1">OpenClaw vs Virtuals</p>
+            <p className="text-gray-500 leading-relaxed">
+              OpenClaw 是<strong>开放生态</strong>：任何开发者发布 skill，任何 agent 使用，skill 可调用第三方 x402 API。
+              Virtuals 是<strong>封闭生态</strong>：其 agent 通过内部网关访问，流量高度集中但不对外开放。
+              长期看 OpenClaw 模式更可持续。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. 需求侧 ─────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <SectionHeader title="需求侧" sub="AI Agent 生态 · 开发者采用率" badge="Live API" />
         <DemandSection />
       </div>
 
-      {/* ── 2. 服务侧 ─────────────────────────────────────────────────────── */}
+      {/* ── 4. 服务侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="服务侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
 
@@ -377,63 +646,26 @@ export default function AiPaymentsPage() {
               <p className="text-[10px] text-gray-400">占 77% 流量</p>
             </div>
           </div>
-          <p className="text-[10px] text-gray-400">官方数据约为 x402scan 的 5-10 倍（含 Facilitator 私下上报）。Buyers 少 = 买家几乎全是 AI Agent（高度匿名化）。</p>
+          <p className="text-[10px] text-gray-400">官方数据约为 x402scan 的 5-10 倍（含 Facilitator 私下上报）。Buyers 少 = 买家几乎全是 AI Agent。</p>
         </div>
 
         <div className="mb-4 bg-blue-50 rounded-lg px-4 py-3 text-xs text-gray-600 leading-relaxed">
           <span className="font-semibold text-gray-800">payTo 地址是什么？</span>
           {' '}服务商的<strong>收款钱包地址</strong>，包含在 HTTP 402 响应头 <code className="bg-white px-1 rounded text-[10px]">X-Payment-Requirements</code> 中。
-          每次 agent 付款 = 一笔 USDC Transfer，在 Basescan 永久可查。
-          <span className="ml-1 text-blue-600 font-medium">V2（2025.12）引入 Dynamic payTo 路由：探针拿到的通常是 Facilitator 地址，而非服务商自己的钱包——隐私问题已基本被架构解决。</span>
+          每次 agent 付款 = 一笔 USDC Transfer，Basescan 永久可查。
+          <span className="ml-1 text-blue-600 font-medium">V2 Dynamic payTo：探针拿到的通常是 Facilitator 地址而非服务商自己的钱包，隐私问题已被架构解决。</span>
         </div>
 
         <ProvidersSection />
 
         <div className="mt-3 bg-amber-50 rounded-lg px-4 py-2.5 text-[11px] text-amber-700">
-          <span className="font-semibold">V2 隐私机制：</span> 90%+ 生产服务商使用 Facilitator（payTo → Facilitator 地址，批量提现），70%+ 使用 Dynamic payTo per-request 子地址。原始服务商钱包几乎不暴露。Firecrawl 探针被拦截（401 先于 402）是 auth 中间件在 x402 中间件之前的架构选择。
+          <span className="font-semibold">V2 隐私机制：</span>
+          90%+ 生产服务商使用 Facilitator（payTo → Facilitator 聚合地址），70%+ 使用 Dynamic payTo per-request 子地址。
+          原始服务商钱包几乎不暴露。Firecrawl 被拦截（401 先于 402）是 auth 中间件在 x402 中间件之前的架构选择。
         </div>
       </div>
 
-      {/* ── 3. 协议对比 ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="协议对比" sub="四层互补，AP2 已将 x402 纳为链上子协议" />
-        <div className="space-y-2">
-          {PROTOCOLS.map(p => (
-            <div key={p.name} className={`border-l-4 ${p.color} bg-gray-50 rounded-r-lg px-4 py-2.5 flex gap-4 items-center`}>
-              <div className="w-28 flex-shrink-0">
-                <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                <p className="text-[10px] text-gray-400">{p.by}</p>
-              </div>
-              <div className="flex-1 grid grid-cols-3 gap-2 text-xs">
-                <div><span className="text-gray-400">层级</span><p className="text-gray-700 font-medium">{p.layer}</p></div>
-                <div><span className="text-gray-400">结算</span><p className="text-gray-700">{p.settlement}</p></div>
-                <div><span className="text-gray-400">核心场景</span><p className="text-gray-700">{p.scene}</p></div>
-              </div>
-              <div className="flex-shrink-0">
-                {p.live
-                  ? <span className="flex items-center gap-1 text-[10px] text-green-600"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />已上线</span>
-                  : <span className="flex items-center gap-1 text-[10px] text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />规范阶段</span>
-                }
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ACP 说明 */}
-        <div className="mt-4 bg-purple-50 rounded-lg px-4 py-3 text-xs">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-700 text-[10px] font-medium">法币轨道</span>
-            <span className="px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-[10px] font-medium">ACP-x402 融合已上线</span>
-            <span className="font-semibold text-gray-700">ACP / Instant Checkout 用户流程</span>
-          </div>
-          <p className="text-gray-500 leading-relaxed">
-            用户在 ChatGPT 表达购买意图 → agent 向商家 ACP 端点请求购物车 → Stripe 嵌入式 UI 弹出（卡号输入给 Stripe，<strong>不传给 ChatGPT</strong>）→ Stripe 生成单次限额 SPT（Shared Payment Token）→ agent 用 SPT 完成结账。老用户通过 Stripe Link 存储的卡可一键完成。<span className="text-purple-600 font-medium">底层是信用卡 / Apple Pay，非稳定币。</span>
-          </p>
-          <p className="text-gray-400 mt-1">ChatGPT / Perplexity / Copilot / Cursor 等均走此轨道。<strong className="text-gray-500">Virtuals Protocol 已将 ACP 与 x402 融合</strong>（acp-x402.virtuals.io），实现"消费层 ACP + 结算层 x402 USDC"双轨合一——这是未来"ACP over x402"架构的现实先例，而非预测。</p>
-        </div>
-      </div>
-
-      {/* ── 4. 基础设施 ────────────────────────────────────────────────────── */}
+      {/* ── 5. 基础设施 ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="基础设施" sub="Facilitator · 链 · 合约地址" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,7 +684,7 @@ export default function AiPaymentsPage() {
               ))}
             </div>
             <div className="mt-2 bg-gray-100 rounded-lg px-3 py-2 text-[11px] text-gray-500">
-              <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。链上追踪 Facilitator 需确认其提交钱包地址（msg.sender），CDP Facilitator 提交地址未公开，待从已知 x402 交易中反向提取。
+              <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。CDP Facilitator 提交地址未公开，待从已知 x402 交易中反向提取。
             </div>
           </div>
 
@@ -477,7 +709,7 @@ export default function AiPaymentsPage() {
         </div>
       </div>
 
-      {/* ── 5. 最新进展 ────────────────────────────────────────────────────── */}
+      {/* ── 6. 最新进展 ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <div className="flex items-baseline gap-3 mb-4">
           <h3 className="text-lg font-semibold text-gray-900">最新进展</h3>
