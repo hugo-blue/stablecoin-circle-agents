@@ -265,10 +265,13 @@ function DemandSection() {
   return (
     <div className="space-y-6">
 
-      {/* ── AI Agent 生态（真正的需求侧） ─────────────────────────────────── */}
+      {/* ── AI Agent 生态（双向参与方） ─────────────────────────────────── */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">AI Agent 生态 — 需求侧核心</p>
-        <p className="text-[11px] text-gray-400 mb-3">这些是真正的"付款方"——agent 通过 Skill 调用 x402-gated API，Facilitator 代付 USDC</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">AI Agent 生态 — 买卖双向参与</p>
+        <p className="text-[11px] text-gray-400 mb-3">
+          同一个 Agent 既是<strong>买家</strong>（调用外部 x402 API）也是<strong>卖家</strong>（把自己的 Skill 封装为 x402 服务出售）。
+          Agent 持有链上钱包，自主支付 + 自主收款，90% 归 Seller，10% 进 ACP Treasury。
+        </p>
 
         {/* OpenClaw 生态 */}
         <div className="border border-gray-100 rounded-xl p-4 mb-3">
@@ -620,38 +623,41 @@ export default function AiPaymentsPage() {
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="稳定币路径架构" sub="Agent → Skill → x402 → USDC 完整链路" />
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-center text-xs mb-4">
-          {[
-            { label: 'AI Agent', sub: 'OpenClaw / Virtuals / AgentKit', color: 'bg-blue-50 border-blue-200' },
-            { label: '↓ 调用 Skill', sub: 'ClawHub / 自定义 Tool', color: 'bg-gray-50 border-gray-200' },
-            { label: 'x402 服务端', sub: 'Firecrawl / Nansen / BlockRun 等', color: 'bg-orange-50 border-orange-200' },
-            { label: '↓ Facilitator', sub: 'Coinbase CDP 代付 · EIP-3009 签名', color: 'bg-gray-50 border-gray-200' },
-            { label: 'Base 链 USDC', sub: 'payTo 地址收款 · Basescan 可查', color: 'bg-green-50 border-green-200' },
-          ].map((s, i) => (
-            <div key={i} className={`rounded-lg border px-3 py-2.5 ${s.color}`}>
-              <p className="font-semibold text-gray-800">{s.label}</p>
-              <p className="text-gray-500 text-[10px] mt-0.5">{s.sub}</p>
-            </div>
-          ))}
+        {/* 双向 Agent 经济流 */}
+        <div className="mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-center text-xs mb-2">
+            {[
+              { label: 'Agent A（Buyer）', sub: 'OpenClaw / Virtuals / AgentKit\n持有链上钱包，自主决策', color: 'bg-blue-50 border-blue-200' },
+              { label: '↕ x402 + Facilitator', sub: 'HTTP 402 · EIP-3009 签名\nBase 链 USDC · 亚秒级', color: 'bg-orange-50 border-orange-200' },
+              { label: 'Agent B（Seller）', sub: 'Skill 封装为 x402 服务\n自动接单 · 收款 · 继续执行', color: 'bg-green-50 border-green-200' },
+            ].map((s, i) => (
+              <div key={i} className={`rounded-lg border px-3 py-2.5 ${s.color}`}>
+                <p className="font-semibold text-gray-800">{s.label}</p>
+                <p className="text-gray-500 text-[10px] mt-0.5 whitespace-pre-line">{s.sub}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 text-center">
+            同一个 Agent 可同时扮演两侧角色 · Seller 收 90%，10% 进 ACP Treasury · Firecrawl / Nansen 等外部 API 也是 Seller 侧
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
           <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="font-semibold text-gray-700 mb-1">x402 协议定位</p>
+            <p className="font-semibold text-gray-700 mb-1">x402 在双向经济中的角色</p>
             <p className="text-gray-500 leading-relaxed">
-              x402 本质是<strong>服务端协议</strong>——任何 API 在 HTTP 中间件加一层 402 即可收费。
-              需求侧（谁付钱）是 AI Agent 生态；供给侧（谁收钱）是 API 服务商。
-              npm 下载量衡量的是<strong>开发者构建服务端</strong>的速度，不是 agent 数量。
+              x402 是<strong>结算层协议</strong>——任何服务端加一层 402 中间件即可收费，无论是传统 API 还是 Agent Skill。
+              Buyer 发请求 → 返回 402 → Facilitator 代付 USDC → Seller 收款。
+              npm 下载量衡量的是<strong>服务端开发者采用率</strong>（Seller 侧），不是 Buyer 数量。
             </p>
           </div>
           <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="font-semibold text-gray-700 mb-1">OpenClaw + Virtuals：互补，非竞争</p>
+            <p className="font-semibold text-gray-700 mb-1">OpenClaw + Virtuals：互补叠加</p>
             <p className="text-gray-500 leading-relaxed">
-              OpenClaw = <strong>Agent 运行时</strong>（本地优先 OS，Skill 市场，模型无关）。
-              Virtuals = <strong>Agent 经济协议</strong>（链上身份、代币化、自主雇佣、4 阶段 escrow）。
-              2026 年 2 月 OpenClaw 官方集成 Virtuals ACP + x402：
-              OpenClaw 跑 agent → Virtuals ACP 协调任务 → x402 结算 USDC。
-              主流路径 = <strong>两者叠加</strong>，非二选一。
+              OpenClaw = <strong>Agent 运行时</strong>（Skill 执行、本地优先、模型无关）。
+              Virtuals = <strong>Agent 经济层</strong>（链上身份、代币化、4 阶段 ACP 任务协调）。
+              2026.02 官方集成：OpenClaw Agent → Virtuals ACP 协调 → x402 结算。
+              <strong>主流路径 = 两者叠加</strong>，Agent 用 OpenClaw 跑任务，用 Virtuals ACP 赚钱。
             </p>
           </div>
         </div>
