@@ -143,6 +143,15 @@ function fmtGrowth(pct: number | null | undefined): string {
   return pct >= 0 ? `+${pct}%` : `${pct}%`
 }
 
+// MoM growth from 8 weekly data points: last 4 weeks vs previous 4 weeks
+function calcMoM(weekly: WeeklyDownload[]): number | null {
+  if (weekly.length < 8) return null
+  const last4 = weekly.slice(-4).reduce((s, w) => s + w.downloads, 0)
+  const prev4 = weekly.slice(-8, -4).reduce((s, w) => s + w.downloads, 0)
+  if (prev4 === 0) return null
+  return Math.round(((last4 - prev4) / prev4) * 100)
+}
+
 // ─── Sparkline ────────────────────────────────────────────────────────────────
 
 function Sparkline({ data }: { data: WeeklyDownload[] }) {
@@ -304,29 +313,31 @@ function DemandSection() {
         <div className="border border-gray-100 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-2 h-2 rounded-full bg-yellow-500" />
-            <p className="text-xs font-semibold text-gray-700">Virtuals Protocol（封闭生态）</p>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-700">ACP-x402 融合已上线</span>
+            <p className="text-xs font-semibold text-gray-700">Virtuals Protocol（链上 Agent 经济层）</p>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-700">已集成 OpenClaw · 2026.02</span>
           </div>
           <div className="text-[11px] text-gray-500 leading-relaxed mb-2">
-            Virtuals 的 AI 虚拟人 / 交易 bot（Luna、AIXBT 等）通过 <code className="bg-gray-100 px-1 rounded">acp-x402.virtuals.io</code> 网关支付 x402 服务——
-            ACP 请求 → x402 转换 → Base 链 USDC 结算。当前占 x402scan 日交易量 <strong className="text-gray-700">77%</strong>，
-            但属于封闭生态内循环，与 OpenClaw 的开放 skill 市场不同。
+            Virtuals 的 <strong>ACP（Agent Commerce Protocol，自研）</strong> 是 Agent 间自主雇佣协议：
+            Request → Negotiation → Transaction（escrow）→ Evaluation（智能合约 4 阶段）。
+            选择 x402 作为支付执行层（<code className="bg-gray-100 px-1 rounded">acp-x402.virtuals.io</code>），
+            每次 agent 雇佣任务 → x402 微支付 → Base 链 USDC 结算。
+            <strong className="text-gray-700">注：这是 Virtuals 自研 ACP，与 Stripe/OpenAI 的 ACP 同名但完全不同。</strong>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-gray-50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-gray-400">x402scan 24h 笔数</p>
               <p className="text-lg font-bold text-black">50.4K</p>
-              <p className="text-[10px] text-gray-400">3.3K buyers（全为 Agent）</p>
+              <p className="text-[10px] text-gray-400">3.3K Agent buyers</p>
             </div>
             <div className="bg-gray-50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-gray-400">日成交额</p>
-              <p className="text-lg font-bold text-black">$79.5K</p>
+              <p className="text-[10px] text-gray-400">Agentic GDP</p>
+              <p className="text-lg font-bold text-black">$470M+</p>
               <p className="text-[10px] text-gray-400">快照 2026-03-21</p>
             </div>
             <div className="bg-gray-50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-gray-400">生态定位</p>
-              <p className="text-sm font-bold text-black">封闭 → 开放</p>
-              <p className="text-[10px] text-gray-400">未来可能向 OpenClaw 迁移</p>
+              <p className="text-[10px] text-gray-400">已部署 Agent</p>
+              <p className="text-lg font-bold text-black">18K+</p>
+              <p className="text-[10px] text-gray-400">OpenClaw 集成后可无缝接入</p>
             </div>
           </div>
         </div>
@@ -338,6 +349,33 @@ function DemandSection() {
         <p className="text-[11px] text-gray-400 mb-3">
           npm 下载量 = 构建 x402 服务端的开发者数量，是供给侧采用率的代理指标，不直接反映 agent 数量
         </p>
+
+        {/* GitHub Stars 行 */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+          <StatCard
+            label="coinbase/x402 GitHub Stars"
+            value={loading ? null : fmt(data?.x402.stars)}
+            sub="x402 协议官方仓库"
+            loading={loading}
+            href="https://github.com/coinbase/x402"
+          />
+          <StatCard
+            label="coinbase/agentkit GitHub Stars"
+            value={loading ? null : fmt(data?.agentkit.stars)}
+            sub="Agent 构建 SDK 仓库"
+            loading={loading}
+            href="https://github.com/coinbase/agentkit"
+          />
+          <StatCard
+            label="openclaw/openclaw GitHub Stars"
+            value={loading ? null : fmt(data?.openclaw.stars)}
+            sub="Agent 运行时框架"
+            loading={loading}
+            href="https://github.com/openclaw/openclaw"
+          />
+        </div>
+
+        {/* npm 趋势行（带 sparkline + WoW + MoM） */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 
           {/* x402 npm */}
@@ -346,11 +384,16 @@ function DemandSection() {
             {loading
               ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
               : (
-                <div className="flex items-baseline gap-2 mb-2">
+                <div className="flex items-baseline gap-2 mb-1">
                   <p className="text-xl font-bold text-black">{fmt(data?.x402.npmWeekly)}</p>
                   {data?.x402.npmGrowthPct != null && (
                     <span className={`text-[11px] font-semibold ${(data.x402.npmGrowthPct ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {fmtGrowth(data.x402.npmGrowthPct)} WoW
+                    </span>
+                  )}
+                  {history && calcMoM(history.x402) != null && (
+                    <span className={`text-[11px] ${(calcMoM(history.x402) ?? 0) >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                      {fmtGrowth(calcMoM(history.x402))} MoM
                     </span>
                   )}
                 </div>
@@ -369,7 +412,14 @@ function DemandSection() {
             {loading
               ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
               : (
-                <p className="text-xl font-bold text-black mb-2">{fmt(data?.x402.coinbaseX402Weekly)}</p>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <p className="text-xl font-bold text-black">{fmt(data?.x402.coinbaseX402Weekly)}</p>
+                  {history && calcMoM(history.coinbaseX402) != null && (
+                    <span className={`text-[11px] ${(calcMoM(history.coinbaseX402) ?? 0) >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                      {fmtGrowth(calcMoM(history.coinbaseX402))} MoM
+                    </span>
+                  )}
+                </div>
               )
             }
             {history && <Sparkline data={history.coinbaseX402} />}
@@ -385,11 +435,16 @@ function DemandSection() {
             {loading
               ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
               : (
-                <div className="flex items-baseline gap-2 mb-2">
+                <div className="flex items-baseline gap-2 mb-1">
                   <p className="text-xl font-bold text-black">{fmt(data?.agentkit.npmWeekly)}</p>
                   {data?.agentkit.npmGrowthPct != null && (
                     <span className={`text-[11px] font-semibold ${(data.agentkit.npmGrowthPct ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {fmtGrowth(data.agentkit.npmGrowthPct)} WoW
+                    </span>
+                  )}
+                  {history && calcMoM(history.agentkit) != null && (
+                    <span className={`text-[11px] ${(calcMoM(history.agentkit) ?? 0) >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                      {fmtGrowth(calcMoM(history.agentkit))} MoM
                     </span>
                   )}
                 </div>
@@ -398,18 +453,10 @@ function DemandSection() {
             {history && <Sparkline data={history.agentkit} />}
             <p className="text-[10px] text-gray-400 mt-1">
               <a href="https://www.npmjs.com/package/@coinbase/agentkit" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@coinbase/agentkit</a>
-              {' '}· Agent 构建 SDK · 含 x402 支付能力
+              {' '}· Agent 构建 SDK · 含 x402 支付能力 · 月 {fmt(data?.agentkit.npmMonthly)}
             </p>
           </div>
 
-        </div>
-        <div className="mt-2 flex gap-4">
-          <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-400 hover:text-blue-500">
-            coinbase/x402 ★{fmt(data?.x402.stars)}
-          </a>
-          <a href="https://github.com/coinbase/agentkit" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-400 hover:text-blue-500">
-            coinbase/agentkit ★{fmt(data?.agentkit.stars)}
-          </a>
         </div>
       </div>
 
@@ -560,12 +607,12 @@ export default function AiPaymentsPage() {
           ))}
         </div>
 
-        {/* 融合已发生 */}
-        <div className="mt-3 bg-yellow-50 rounded-lg px-4 py-2.5 text-[11px] text-yellow-800">
-          <span className="font-semibold">ACP-x402 融合先例（已上线）：</span>
-          Virtuals Protocol 的 <code className="bg-white px-1 rounded text-[10px]">acp-x402.virtuals.io</code> 实现了
-          "消费层 ACP + 结算层 x402"——agent 发 ACP 商务请求，网关转换为 x402，Base 链 USDC 结算。
-          这是"ACP over x402"架构的现实先例，当前贡献 x402scan 77% 日流量。
+        {/* 命名冲突说明 */}
+        <div className="mt-3 bg-amber-50 rounded-lg px-4 py-2.5 text-[11px] text-amber-800">
+          <span className="font-semibold">⚠ 命名冲突：Virtuals ACP ≠ Stripe ACP</span>
+          {' '}两者同名但完全不同协议。Stripe/OpenAI 的 ACP = 消费购物协议（法币轨道）。
+          Virtuals 的 ACP = <strong>Agent Commerce Protocol</strong>——Agent 间自主雇佣 / 任务协调 / 4 阶段智能合约 escrow（稳定币轨道）。
+          Virtuals 独立设计了这套协议，并选择 x402 作为支付执行层，与 Stripe ACP 无关。
         </div>
       </div>
 
@@ -598,11 +645,13 @@ export default function AiPaymentsPage() {
             </p>
           </div>
           <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="font-semibold text-gray-700 mb-1">OpenClaw vs Virtuals</p>
+            <p className="font-semibold text-gray-700 mb-1">OpenClaw + Virtuals：互补，非竞争</p>
             <p className="text-gray-500 leading-relaxed">
-              OpenClaw 是<strong>开放生态</strong>：任何开发者发布 skill，任何 agent 使用，skill 可调用第三方 x402 API。
-              Virtuals 是<strong>封闭生态</strong>：其 agent 通过内部网关访问，流量高度集中但不对外开放。
-              长期看 OpenClaw 模式更可持续。
+              OpenClaw = <strong>Agent 运行时</strong>（本地优先 OS，Skill 市场，模型无关）。
+              Virtuals = <strong>Agent 经济协议</strong>（链上身份、代币化、自主雇佣、4 阶段 escrow）。
+              2026 年 2 月 OpenClaw 官方集成 Virtuals ACP + x402：
+              OpenClaw 跑 agent → Virtuals ACP 协调任务 → x402 结算 USDC。
+              主流路径 = <strong>两者叠加</strong>，非二选一。
             </p>
           </div>
         </div>
