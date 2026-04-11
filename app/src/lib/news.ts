@@ -62,10 +62,31 @@ export function isDuplicate(
 }
 
 const TAG_KEYWORDS: Record<string, string[]> = {
-  usdt: ['tether', 'usdt', '泰达'],
-  usdc: ['circle', 'usdc', 'eurc'],
-  'ai-payments': ['x402', 'agent', 'agentkit', 'openclaw', 'superfluid', 'sablier', 'ai payment'],
-  regulation: ['sec', 'cftc', 'mica', 'genius act', 'ban', 'lawsuit', 'enforcement', '监管', '合规'],
+  usdc: [
+    'circle', 'usdc', 'eurc', 'cctp',
+  ],
+  usdt: [
+    'tether', 'usdt',
+  ],
+  'ai-payments': [
+    'x402', 'agentkit', 'openclaw', 'superfluid', 'sablier',
+    'agentic', 'ai agent', 'agent payment', 'ai payment',
+    'virtuals protocol', 'ap2 protocol', 'acp protocol', 'agent commerce',
+    'machine payment', 'llm payment', 'crypto agent',
+  ],
+  regulation: [
+    // US legislation
+    'genius act', 'stablecoin bill', 'stablecoin act', 'crypto bill', 'crypto law',
+    // Regulators
+    'sec charges', 'sec sues', 'sec enforcement', 'sec ruling', 'sec action',
+    'cftc', 'mica', 'fatf', 'fsb', 'cbdc', 'occ',
+    // Legislative bodies
+    'senate', 'congress', 'treasury',
+    // Enforcement
+    'enforcement action', 'regulatory', 'lawsuit', 'crypto ban',
+    // Chinese
+    '监管', '合规', '立法',
+  ],
 }
 
 /**
@@ -85,9 +106,13 @@ export function classifyTags(title: string): string[] {
 }
 
 const SEVERITY_KEYWORDS: Record<string, string[]> = {
-  high: ['depeg', 'hack', 'ban', 'freeze', 'lawsuit', 'crash', '脱锚', '冻结', '被黑'],
-  positive: ['launch', 'partnership', 'approved', 'ipo', 'milestone', '上线', '合作', '获批'],
-  medium: ['regulation', 'audit', 'report', 'update', '监管', '审计', '报告'],
+  high: ['depeg', 'hack', 'freeze', 'crash', 'ban', 'lawsuit', 'charges', 'enforcement', '脱锚', '冻结', '被黑'],
+  positive: [
+    'launch', 'launches', 'partnership', 'approved', 'approval', 'ipo', 'milestone',
+    'announces', 'announced', 'integrates', 'expands', 'joins',
+    '上线', '合作', '获批', '发布',
+  ],
+  medium: ['regulation', 'regulatory', 'audit', 'report', 'update', 'proposes', 'bill', '监管', '审计', '报告'],
 }
 
 /**

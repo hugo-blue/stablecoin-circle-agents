@@ -126,6 +126,9 @@ function NewsList() {
                   {item.titleZh ?? item.title}
                 </p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {item.sourceType === 'official' && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">官方</span>
+                  )}
                   <span className="text-[11px] font-medium text-gray-500">{item.source}</span>
                   <span className="text-[10px] text-gray-300">·</span>
                   <span className="text-[10px] text-gray-400">{fmtDate(item.publishedAt)}</span>
@@ -145,7 +148,7 @@ function NewsList() {
       </div>
 
       <p className="text-xs text-gray-400 text-center">
-        来源：Cointelegraph · CoinDesk · Decrypt · The Block · 每 30 分钟更新
+        官方来源：Circle Blog · Coinbase Blog &nbsp;|&nbsp; 媒体：CoinDesk · The Block · Cointelegraph · Decrypt · 每 30 分钟更新
       </p>
     </div>
   )

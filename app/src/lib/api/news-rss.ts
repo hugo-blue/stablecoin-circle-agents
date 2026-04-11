@@ -6,18 +6,24 @@ export type NewsItem = {
   titleZh?: string      // Chinese translation (best-effort)
   url: string
   source: string
+  sourceType: 'official' | 'media'
   publishedAt: string   // ISO string
   tags: string[]
   severity: 'high' | 'positive' | 'medium' | 'low'
 }
 
-type RSSSource = { name: string; url: string }
+type RSSSource = { name: string; url: string; type: 'official' | 'media' }
 
+// Official blogs are always shown; media articles are filtered to tagged-only.
 const SOURCES: RSSSource[] = [
-  { name: 'Cointelegraph', url: 'https://cointelegraph.com/rss' },
-  { name: 'CoinDesk',      url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
-  { name: 'Decrypt',       url: 'https://decrypt.co/feed' },
-  { name: 'The Block',     url: 'https://www.theblock.co/rss.xml' },
+  // ── Official primary sources (highest signal) ───────────────────────────
+  { name: 'Circle Blog',   url: 'https://www.circle.com/blog/rss',           type: 'official' },
+  { name: 'Coinbase Blog', url: 'https://blog.coinbase.com/feed',             type: 'official' },
+  // ── Credible crypto media ───────────────────────────────────────────────
+  { name: 'CoinDesk',      url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', type: 'media' },
+  { name: 'The Block',     url: 'https://www.theblock.co/rss.xml',           type: 'media' },
+  { name: 'Cointelegraph', url: 'https://cointelegraph.com/rss',             type: 'media' },
+  { name: 'Decrypt',       url: 'https://decrypt.co/feed',                   type: 'media' },
 ]
 
 // ─── XML helpers ─────────────────────────────────────────────────────────────
@@ -53,7 +59,7 @@ function makeId(url: string): string {
   return h.toString(36)
 }
 
-function parseItems(xml: string, sourceName: string): NewsItem[] {
+function parseItems(xml: string, src: RSSSource): NewsItem[] {
   const items: NewsItem[] = []
 
   // RSS 2.0 <item>
@@ -70,7 +76,8 @@ function parseItems(xml: string, sourceName: string): NewsItem[] {
       id: makeId(normalized),
       title,
       url: normalized,
-      source: sourceName,
+      source: src.name,
+      sourceType: src.type,
       publishedAt: pub ? new Date(pub).toISOString() : new Date().toISOString(),
       tags: classifyTags(title),
       severity: classifySeverity(title),
@@ -90,7 +97,8 @@ function parseItems(xml: string, sourceName: string): NewsItem[] {
       id: makeId(normalized),
       title,
       url: normalized,
-      source: sourceName,
+      source: src.name,
+      sourceType: src.type,
       publishedAt: pub ? new Date(pub).toISOString() : new Date().toISOString(),
       tags: classifyTags(title),
       severity: classifySeverity(title),
@@ -108,7 +116,7 @@ async function fetchSource(src: RSSSource): Promise<NewsItem[]> {
     })
     if (!res.ok) return []
     const xml = await res.text()
-    return parseItems(xml, src.name)
+    return parseItems(xml, src)
   } catch {
     return []
   }
@@ -175,7 +183,12 @@ export async function fetchAllNews(): Promise<NewsItem[]> {
   // Sort newest first
   seen.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
-  const translated = await translateItems(seen.slice(0, 120))
+  // Relevance filter: official sources always shown; media only if tagged to a known category
+  const relevant = seen.filter(item =>
+    item.sourceType === 'official' || !item.tags.includes('other')
+  )
+
+  const translated = await translateItems(relevant.slice(0, 120))
   cache = { items: translated, fetchedAt: Date.now() }
   return cache.items
 }

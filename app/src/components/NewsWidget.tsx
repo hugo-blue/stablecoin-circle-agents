@@ -95,6 +95,9 @@ export function NewsWidget({ category = 'all', title = '最新动态' }: Props) 
                   {item.titleZh ?? item.title}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {item.sourceType === 'official' && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">官方</span>
+                  )}
                   <span className="text-[10px] text-gray-400">{item.source}</span>
                   <span className="text-[10px] text-gray-300">·</span>
                   <span className="text-[10px] text-gray-400">{fmtAge(item.publishedAt)}</span>
