@@ -123,7 +123,7 @@ function NewsList() {
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-800 leading-snug group-hover:text-blue-600 transition-colors">
-                  {item.title}
+                  {item.titleZh ?? item.title}
                 </p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className="text-[11px] font-medium text-gray-500">{item.source}</span>

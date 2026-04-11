@@ -3,6 +3,7 @@ import { isDuplicate, classifyTags, classifySeverity, normalizeUrl } from '@/lib
 export type NewsItem = {
   id: string
   title: string
+  titleZh?: string      // Chinese translation (best-effort)
   url: string
   source: string
   publishedAt: string   // ISO string
@@ -113,6 +114,43 @@ async function fetchSource(src: RSSSource): Promise<NewsItem[]> {
   }
 }
 
+// ─── Translation (Google Translate gtx, no API key) ─────────────────────────
+
+const TRANSLATE_BATCH = 20
+
+async function translateBatch(titles: string[]): Promise<string[]> {
+  const joined = titles.join('\n')
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(joined)}`
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(12_000),
+    })
+    if (!res.ok) return titles
+    const data = (await res.json()) as [[string, string | null][], unknown, string]
+    const translated = data[0].map(seg => seg[0]).join('')
+    const parts = translated.split('\n')
+    if (parts.length !== titles.length) return titles
+    return parts.map(s => s.trim())
+  } catch {
+    return titles
+  }
+}
+
+async function translateItems(items: NewsItem[]): Promise<NewsItem[]> {
+  const result: NewsItem[] = []
+  for (let i = 0; i < items.length; i += TRANSLATE_BATCH) {
+    const batch = items.slice(i, i + TRANSLATE_BATCH)
+    const titles = batch.map(item => item.title)
+    const translated = await translateBatch(titles)
+    for (let j = 0; j < batch.length; j++) {
+      const zh = translated[j]?.trim()
+      result.push({ ...batch[j], titleZh: zh && zh !== batch[j].title ? zh : undefined })
+    }
+  }
+  return result
+}
+
 // ─── Module-level cache (30 min) ─────────────────────────────────────────────
 
 let cache: { items: NewsItem[]; fetchedAt: number } | null = null
@@ -137,7 +175,8 @@ export async function fetchAllNews(): Promise<NewsItem[]> {
   // Sort newest first
   seen.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
-  cache = { items: seen.slice(0, 120), fetchedAt: Date.now() }
+  const translated = await translateItems(seen.slice(0, 120))
+  cache = { items: translated, fetchedAt: Date.now() }
   return cache.items
 }
 

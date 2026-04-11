@@ -92,7 +92,7 @@ export function NewsWidget({ category = 'all', title = '最新动态' }: Props) 
             >
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-800 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
-                  {item.title}
+                  {item.titleZh ?? item.title}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span className="text-[10px] text-gray-400">{item.source}</span>
