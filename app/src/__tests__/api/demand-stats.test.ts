@@ -24,7 +24,7 @@ function fullStub(weekMultiplier = 1, monthMultiplier = 4) {
   return {
     'repos/openclaw/openclaw': makeGithubRepo(327415),
     'repos/coinbase/agentkit': makeGithubRepo(1166),
-    'repos/coinbase/x402': makeGithubRepo(5741),
+    'repos/x402-foundation/x402': makeGithubRepo(5741),
     'last-week/x402': makeNpm(124892 * weekMultiplier, 'x402'),
     'last-week/@coinbase/agentkit': makeNpm(3469 * weekMultiplier, '@coinbase/agentkit'),
     'last-week/@coinbase/x402': makeNpm(13547 * weekMultiplier, '@coinbase/x402'),
@@ -115,7 +115,7 @@ describe('GET /api/ai-payments/demand-stats', () => {
     stubFetch({
       ...fullStub(),
       'repos/coinbase/agentkit': { ok: false, json: () => Promise.resolve({}) },
-      'repos/coinbase/x402': { ok: false, json: () => Promise.resolve({}) },
+      'repos/x402-foundation/x402': { ok: false, json: () => Promise.resolve({}) },
     })
     const res = await GET()
     const body = await res.json()

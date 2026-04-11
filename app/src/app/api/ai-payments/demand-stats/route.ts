@@ -54,7 +54,7 @@ export async function GET() {
   ] = await Promise.all([
     fetchGithubStars('openclaw/openclaw'),
     fetchGithubStars('coinbase/agentkit'),
-    fetchGithubStars('coinbase/x402'),
+    fetchGithubStars('x402-foundation/x402'),
     fetchNpmDownloads('x402', 'last-week'),
     fetchNpmDownloads('x402', 'last-month'),
     fetchNpmDownloads('@coinbase/x402', 'last-week'),

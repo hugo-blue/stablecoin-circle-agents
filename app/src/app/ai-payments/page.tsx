@@ -405,7 +405,7 @@ function DemandSection() {
         {/* GitHub Stars 行（含 WoW 新增） */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
           {[
-            { label: 'coinbase/x402 Stars', starsVal: data?.x402.stars, wow: history?.starWoW?.x402, href: 'https://github.com/coinbase/x402', sub: 'x402 协议官方仓库' },
+            { label: 'x402-foundation/x402 Stars', starsVal: data?.x402.stars, wow: history?.starWoW?.x402, href: 'https://github.com/x402-foundation/x402', sub: 'x402 协议官方仓库' },
             { label: 'coinbase/agentkit Stars', starsVal: data?.agentkit.stars, wow: history?.starWoW?.agentkit, href: 'https://github.com/coinbase/agentkit', sub: 'Agent 构建 SDK' },
             { label: 'openclaw Stars', starsVal: data?.openclaw.stars, wow: history?.starWoW?.openclaw, href: 'https://github.com/openclaw/openclaw', sub: 'Agent 运行时框架' },
           ].map(({ label, starsVal, wow, href, sub }) => {
@@ -649,7 +649,7 @@ export default function AiPaymentsPage() {
         </div>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'coinbase/x402', starsVal: demandData?.x402.stars, wow: history?.starWoW?.x402, href: 'https://github.com/coinbase/x402', sub: 'x402 协议官方仓库' },
+            { label: 'x402-foundation/x402', starsVal: demandData?.x402.stars, wow: history?.starWoW?.x402, href: 'https://github.com/x402-foundation/x402', sub: 'x402 协议官方仓库' },
             { label: 'coinbase/agentkit', starsVal: demandData?.agentkit.stars, wow: history?.starWoW?.agentkit, href: 'https://github.com/coinbase/agentkit', sub: 'Agent 构建 SDK' },
             { label: 'openclaw', starsVal: demandData?.openclaw.stars, wow: history?.starWoW?.openclaw, href: 'https://github.com/openclaw/openclaw', sub: 'Agent 运行时框架' },
           ].map(({ label, starsVal, wow, href, sub }) => {
