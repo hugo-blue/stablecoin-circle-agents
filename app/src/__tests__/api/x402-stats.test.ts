@@ -24,6 +24,7 @@ describe('GET /api/ai-payments/x402-stats', () => {
     expect(body).toHaveProperty('updatedAt')
     expect(isIsoTimestamp(body.updatedAt)).toBe(true)
     expect(body).toHaveProperty('data')
+    expect(body).toHaveProperty('snapshotDate')
   })
 
   it('data has all required numeric fields when state is success or stale', async () => {
@@ -40,6 +41,14 @@ describe('GET /api/ai-payments/x402-stats', () => {
       expect(typeof d.activeFacilitators).toBe('number')
       expect(typeof d.totalEcosystemProjects).toBe('number')
       expect(typeof d.cumulativeTxCount).toBe('number')
+      // Snapshot display fields
+      expect(typeof d.snapshotDate).toBe('string')
+      expect(typeof d.x402scanDailyTxCount).toBe('number')
+      expect(typeof d.x402scanDailyVolumeUsdc).toBe('number')
+      expect(typeof d.activeSellers).toBe('number')
+      expect(typeof d.activeBuyers).toBe('number')
+      expect(d.topServer).toHaveProperty('name')
+      expect(d.topServer).toHaveProperty('sharePct')
     }
   })
 

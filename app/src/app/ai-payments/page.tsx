@@ -232,6 +232,29 @@ function StatCard({ label, value, sub, loading, href, growth }: {
   )
 }
 
+// ─── x402 Snapshot (from /api/ai-payments/x402-stats) ───────────────────────
+
+type X402Snapshot = {
+  snapshotDate: string
+  officialMonthlyTxCount: number
+  x402scanDailyTxCount: number
+  x402scanDailyVolumeUsdc: number
+  activeSellers: number
+  activeBuyers: number
+  topServer: { name: string; sharePct: number }
+}
+
+function fmtK(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
+}
+
+function fmtUSDK(n: number): string {
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`
+  return `$${n.toFixed(0)}`
+}
+
 // ─── Demand Stats (live) ──────────────────────────────────────────────────────
 
 type DemandData = {
@@ -258,11 +281,12 @@ function DemandSection() {
   const [data, setData] = useState<DemandData | null>(null)
   const [state, setState] = useState<'loading' | 'success' | 'partial' | 'error'>('loading')
   const [history, setHistory] = useState<HistoryData | null>(null)
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/ai-payments/demand-stats')
       .then(r => r.json())
-      .then(body => { setData(body.data); setState(body.state) })
+      .then(body => { setData(body.data); setState(body.state); if (body.updatedAt) setUpdatedAt(body.updatedAt) })
       .catch(() => setState('error'))
 
     fetch('/api/ai-payments/demand-history')
@@ -278,7 +302,10 @@ function DemandSection() {
 
       {/* ── AI Agent 生态（双向参与方） ─────────────────────────────────── */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">AI Agent 生态 — 买卖双向参与</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Agent 生态 — 买卖双向参与</p>
+          {updatedAt && <span className="text-[10px] text-gray-400">· 更新于 {new Date(updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+        </div>
         <p className="text-[11px] text-gray-400 mb-3">
           同一个 Agent 既是<strong>买家</strong>（调用外部 x402 API）也是<strong>卖家</strong>（把自己的 Skill 封装为 x402 服务出售）。
           Agent 持有链上钱包，自主支付 + 自主收款，90% 归 Seller，10% 进 ACP Treasury。
@@ -560,6 +587,15 @@ function ProvidersSection() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AiPaymentsPage() {
+  const [x402Stats, setX402Stats] = useState<X402Snapshot | null>(null)
+
+  useEffect(() => {
+    fetch('/api/ai-payments/x402-stats')
+      .then(r => r.json())
+      .then(body => { if (body.data?.snapshotDate) setX402Stats(body.data) })
+      .catch(() => {})
+  }, [])
+
   return (
     <div className="space-y-6">
       <div>
@@ -687,29 +723,46 @@ export default function AiPaymentsPage() {
         {/* x402scan 生态快照 */}
         <div className="mb-4 bg-gray-50 rounded-lg px-4 py-3">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">x402scan 独立链上索引 · 快照 2026-03-21</p>
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
+              x402scan 独立链上索引 · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}
+            </p>
             <a href="https://x402scan.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">实时榜单 ↗</a>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
             <div className="bg-white rounded-lg px-3 py-2 text-center">
               <p className="text-[10px] text-gray-400 mb-0.5">官方月交易量</p>
-              <p className="text-lg font-bold text-black">75.4M</p>
+              <p className="text-lg font-bold text-black">
+                {x402Stats ? fmtK(x402Stats.officialMonthlyTxCount) : '75.4M'}
+              </p>
               <p className="text-[10px] text-gray-400">x402.org Facilitator 上报</p>
             </div>
             <div className="bg-white rounded-lg px-3 py-2 text-center">
               <p className="text-[10px] text-gray-400 mb-0.5">x402scan 24h 笔数</p>
-              <p className="text-lg font-bold text-black">65.3K</p>
+              <p className="text-lg font-bold text-black">
+                {x402Stats ? fmtK(x402Stats.x402scanDailyTxCount) : '65.3K'}
+              </p>
               <p className="text-[10px] text-gray-400">链上独立验证</p>
             </div>
             <div className="bg-white rounded-lg px-3 py-2 text-center">
               <p className="text-[10px] text-gray-400 mb-0.5">24h 成交额</p>
-              <p className="text-lg font-bold text-black">$67.4K</p>
-              <p className="text-[10px] text-gray-400">834 sellers · 3.77K buyers</p>
+              <p className="text-lg font-bold text-black">
+                {x402Stats ? fmtUSDK(x402Stats.x402scanDailyVolumeUsdc) : '$67.4K'}
+              </p>
+              <p className="text-[10px] text-gray-400">
+                {x402Stats
+                  ? `${x402Stats.activeSellers} sellers · ${fmtK(x402Stats.activeBuyers)} buyers`
+                  : '834 sellers · 3.77K buyers'
+                }
+              </p>
             </div>
             <div className="bg-white rounded-lg px-3 py-2 text-center">
               <p className="text-[10px] text-gray-400 mb-0.5">最大 Server</p>
-              <p className="text-sm font-bold text-black leading-tight">Virtuals Protocol</p>
-              <p className="text-[10px] text-gray-400">占 77% 流量</p>
+              <p className="text-sm font-bold text-black leading-tight">
+                {x402Stats?.topServer.name ?? 'Virtuals Protocol'}
+              </p>
+              <p className="text-[10px] text-gray-400">
+                占 {x402Stats?.topServer.sharePct ?? 77}% 流量
+              </p>
             </div>
           </div>
           <p className="text-[10px] text-gray-400">官方数据约为 x402scan 的 5-10 倍（含 Facilitator 私下上报）。Buyers 少 = 买家几乎全是 AI Agent。</p>
@@ -779,7 +832,7 @@ export default function AiPaymentsPage() {
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <div className="flex items-baseline gap-3 mb-4">
           <h3 className="text-lg font-semibold text-gray-900">最新进展</h3>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">数据接入中</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">手动整理 · 截止 2026-03-21</span>
           <span className="text-xs text-gray-400">协议发布 · 生态动态 · 机构采用</span>
         </div>
         <div className="space-y-2">
@@ -799,7 +852,7 @@ export default function AiPaymentsPage() {
           ))}
         </div>
         <p className="mt-3 text-xs text-gray-400">
-          后续将接入 RSS / API 自动抓取，实时追踪 x402、AP2、ACP、OpenClaw 等生态动态。
+          人工整理的历史记录，非自动抓取。后续计划接入 RSS / API 实时追踪 x402、AP2、ACP、OpenClaw 等生态动态。
         </p>
       </div>
     </div>

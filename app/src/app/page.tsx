@@ -7,6 +7,10 @@ import { MintBurnChart } from '@/components/MintBurnChart'
 import { MarketShareChart } from '@/components/MarketShareChart'
 import type { StablecoinMarket, ChainDistribution, MultiCoinFlow } from '@/types'
 
+function fmtTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export default function HomePage() {
   const [markets, setMarkets] = useState<StablecoinMarket[]>([])
   const [chains, setChains] = useState<ChainDistribution[]>([])
@@ -14,6 +18,7 @@ export default function HomePage() {
   const [marketShare, setMarketShare] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(true)
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
 
   useEffect(() => {
     // Fetch realtime data (CoinGecko + DefiLlama current)
@@ -26,6 +31,7 @@ export default function HomePage() {
         const marketsData = await marketsRes.json()
         const chainsData = await chainsRes.json()
         if (marketsData.data) setMarkets(marketsData.data)
+        if (marketsData.updatedAt) setUpdatedAt(marketsData.updatedAt)
         if (chainsData.data) setChains(chainsData.data)
       } catch (err) {
         console.error('Failed to fetch realtime data:', err)
@@ -67,7 +73,12 @@ export default function HomePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">宏观全景</h1>
-        <p className="text-sm text-gray-500 mt-1">稳定币市场实时数据</p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-sm text-gray-500">稳定币市场实时数据</p>
+          {updatedAt && (
+            <span className="text-xs text-gray-400">· 更新于 {fmtTime(updatedAt)} · 60s 自动刷新</span>
+          )}
+        </div>
       </div>
 
       {/* M1.1 核心指标卡 */}

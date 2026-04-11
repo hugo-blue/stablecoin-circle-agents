@@ -4,6 +4,16 @@ import { useState } from 'react'
 import { ECOSYSTEM_PLAYERS, GENIUS_ACT, STABLECOIN_COMPARISONS } from '@/lib/data/us-stablecoin-ecosystem'
 import type { EcosystemPlayer } from '@/types'
 
+// liveMarketCaps: symbol → USD value (from CoinGecko)
+type LiveMarketCaps = Record<string, number | undefined>
+
+function fmtMarketCap(n: number): string {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(0)}B`
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`
+  return `$${n.toFixed(0)}`
+}
+
 type ViewTab = 'map' | 'compare' | 'genius'
 
 const TAB_CONFIG: { key: ViewTab; label: string }[] = [
@@ -35,9 +45,12 @@ const STATUS_BADGE = {
 
 const CATEGORY_ORDER: EcosystemPlayer['category'][] = ['issuer', 'exchange', 'card-network', 'fintech', 'bank']
 
-function PlayerCard({ player }: { player: EcosystemPlayer }) {
+function PlayerCard({ player, liveMarketCaps }: { player: EcosystemPlayer; liveMarketCaps?: LiveMarketCaps }) {
   const relation = RELATION_CONFIG[player.circleRelation]
   const status = STATUS_BADGE[player.status]
+  const liveCap = player.stablecoin ? liveMarketCaps?.[player.stablecoin] : undefined
+  const displayValue = liveCap != null ? fmtMarketCap(liveCap) : player.keyMetricValue
+  const isLive = liveCap != null
   return (
     <div className={`rounded-lg border-2 ${relation.borderColor} p-3 min-w-[180px] flex-1`}>
       <div className="flex items-center gap-2 mb-1">
@@ -49,11 +62,12 @@ function PlayerCard({ player }: { player: EcosystemPlayer }) {
         )}
       </div>
       {player.stablecoin && (
-        <p className="text-xs text-gray-500 mb-1">{player.stablecoin}{player.marketCapUsd ? ` — ${player.keyMetricValue}` : ''}</p>
+        <p className="text-xs text-gray-500 mb-1">{player.stablecoin}{player.marketCapUsd ? ` — ${displayValue}` : ''}</p>
       )}
       <div className="flex items-baseline gap-1 mb-2">
         <span className="text-xs text-gray-400">{player.keyMetric}</span>
-        <span className="text-sm font-semibold text-gray-800">{player.keyMetricValue}</span>
+        <span className="text-sm font-semibold text-gray-800">{displayValue}</span>
+        {isLive && <span className="text-[9px] text-green-600 font-medium">实时</span>}
       </div>
       <div className="flex items-center gap-1.5">
         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${relation.badgeBg}`}>
@@ -65,14 +79,20 @@ function PlayerCard({ player }: { player: EcosystemPlayer }) {
   )
 }
 
-function EcosystemMapView() {
+function EcosystemMapView({ liveMarketCaps }: { liveMarketCaps?: LiveMarketCaps }) {
+  const liveUsdc = liveMarketCaps?.['USDC']
   return (
     <div className="space-y-4">
       {/* Circle at center */}
       <div className="flex justify-center mb-2">
         <div className="rounded-xl border-2 border-green-400 bg-green-50 px-6 py-3 text-center">
           <p className="font-bold text-gray-900 text-lg">Circle / USDC</p>
-          <p className="text-sm text-gray-600">$78B 市值 | 生态中心</p>
+          <p className="text-sm text-gray-600">
+            {liveUsdc != null
+              ? <>{fmtMarketCap(liveUsdc)} 市值 <span className="text-[10px] text-green-600 font-medium">实时</span> | 生态中心</>
+              : '$78B 市值 | 生态中心'
+            }
+          </p>
         </div>
       </div>
 
@@ -89,7 +109,7 @@ function EcosystemMapView() {
             </div>
             <div className="flex flex-wrap gap-3">
               {players.map(player => (
-                <PlayerCard key={player.id} player={player} />
+                <PlayerCard key={player.id} player={player} liveMarketCaps={liveMarketCaps} />
               ))}
             </div>
           </div>
@@ -109,7 +129,8 @@ function EcosystemMapView() {
   )
 }
 
-function ComparisonView() {
+function ComparisonView({ liveMarketCaps }: { liveMarketCaps?: LiveMarketCaps }) {
+  const hasLive = liveMarketCaps && Object.values(liveMarketCaps).some(v => v != null)
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -133,12 +154,20 @@ function ComparisonView() {
             ['核心用例', 'keyUseCase'],
           ] as const).map(([label, key]) => (
             <tr key={key} className="border-b border-gray-50">
-              <td className="py-2 px-2 text-xs font-medium text-gray-500">{label}</td>
-              {STABLECOIN_COMPARISONS.map(c => (
-                <td key={c.symbol} className="py-2 px-2 text-xs text-gray-700">
-                  {c[key]}
-                </td>
-              ))}
+              <td className="py-2 px-2 text-xs font-medium text-gray-500">
+                {label}
+                {key === 'marketCap' && hasLive && (
+                  <span className="ml-1 text-[9px] text-green-600 font-medium">实时</span>
+                )}
+              </td>
+              {STABLECOIN_COMPARISONS.map(c => {
+                const liveCap = key === 'marketCap' ? liveMarketCaps?.[c.symbol] : undefined
+                return (
+                  <td key={c.symbol} className="py-2 px-2 text-xs text-gray-700">
+                    {liveCap != null ? fmtMarketCap(liveCap) : c[key]}
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>
@@ -257,7 +286,7 @@ function GeniusActView() {
   )
 }
 
-export function USStablecoinEcosystem() {
+export function USStablecoinEcosystem({ liveMarketCaps }: { liveMarketCaps?: LiveMarketCaps }) {
   const [activeTab, setActiveTab] = useState<ViewTab>('map')
 
   return (
@@ -281,8 +310,8 @@ export function USStablecoinEcosystem() {
         </div>
       </div>
 
-      {activeTab === 'map' && <EcosystemMapView />}
-      {activeTab === 'compare' && <ComparisonView />}
+      {activeTab === 'map' && <EcosystemMapView liveMarketCaps={liveMarketCaps} />}
+      {activeTab === 'compare' && <ComparisonView liveMarketCaps={liveMarketCaps} />}
       {activeTab === 'genius' && <GeniusActView />}
     </div>
   )

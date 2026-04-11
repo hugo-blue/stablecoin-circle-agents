@@ -16,6 +16,10 @@ import { RevenueAttributionChart } from '@/components/RevenueAttributionChart'
 import { USStablecoinEcosystem } from '@/components/USStablecoinEcosystem'
 import { CircleKeyMetricsTrend } from '@/components/CircleKeyMetricsTrend'
 
+function fmtTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export default function UsdcPage() {
   const [markets, setMarkets] = useState<StablecoinMarket[]>([])
   const [chains, setChains] = useState<ChainDistribution[]>([])
@@ -27,6 +31,7 @@ export default function UsdcPage() {
   const [volumeLoading, setVolumeLoading] = useState(true)
   const [flowPeriod, setFlowPeriod] = useState<1 | 7 | 30>(7)
   const [marketShareHistory, setMarketShareHistory] = useState<any[]>([])
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -38,6 +43,7 @@ export default function UsdcPage() {
         const marketsData = await marketsRes.json()
         const chainsData = await chainsRes.json()
         if (marketsData.data) setMarkets(marketsData.data)
+        if (marketsData.updatedAt) setUpdatedAt(marketsData.updatedAt)
         if (chainsData.data) setChains(chainsData.data.filter((d: ChainDistribution) => d.symbol === 'USDC'))
       } catch (err) {
         console.error('Failed to fetch data:', err)
@@ -103,7 +109,12 @@ export default function UsdcPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">USDC / Circle</h1>
-        <p className="text-sm text-gray-500 mt-1">USDC 链上数据与 Circle 财务追踪</p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-sm text-gray-500">USDC 链上数据与 Circle 财务追踪</p>
+          {updatedAt && (
+            <span className="text-xs text-gray-400">· 更新于 {fmtTime(updatedAt)}</span>
+          )}
+        </div>
       </div>
 
       {/* M3.1 USDC 链上总览 */}
@@ -224,7 +235,11 @@ export default function UsdcPage() {
         <h2 className="text-xl font-bold text-gray-900 mb-1">美国稳定币生态</h2>
         <p className="text-sm text-gray-500 mb-4">Circle 在生态中的位置与竞争格局</p>
       </div>
-      <USStablecoinEcosystem />
+      <USStablecoinEcosystem liveMarketCaps={{
+        USDC: markets.find(m => m.symbol === 'USDC')?.marketCap,
+        USDT: markets.find(m => m.symbol === 'USDT')?.marketCap,
+        PYUSD: markets.find(m => m.symbol === 'PYUSD')?.marketCap,
+      }} />
     </div>
   )
 }
