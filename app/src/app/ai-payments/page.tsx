@@ -599,11 +599,29 @@ function ProvidersSection() {
 
 export default function AiPaymentsPage() {
   const [x402Stats, setX402Stats] = useState<X402Snapshot | null>(null)
+  const [demandData, setDemandData] = useState<DemandData | null>(null)
+  const [demandLoading, setDemandLoading] = useState(true)
+  const [history, setHistory] = useState<HistoryData | null>(null)
+  const [demandUpdatedAt, setDemandUpdatedAt] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/ai-payments/x402-stats')
       .then(r => r.json())
       .then(body => { if (body.data?.snapshotDate) setX402Stats(body.data) })
+      .catch(() => {})
+
+    fetch('/api/ai-payments/demand-stats')
+      .then(r => r.json())
+      .then(body => {
+        setDemandData(body.data)
+        setDemandLoading(false)
+        if (body.updatedAt) setDemandUpdatedAt(body.updatedAt)
+      })
+      .catch(() => setDemandLoading(false))
+
+    fetch('/api/ai-payments/demand-history')
+      .then(r => r.json())
+      .then(body => { if (body.state !== 'error') setHistory(body.data) })
       .catch(() => {})
   }, [])
 
@@ -620,62 +638,164 @@ export default function AiPaymentsPage() {
       {/* 新闻 */}
       <NewsWidget title="AI 支付生态动态" category="ai-payments" />
 
+      {/* GitHub Stars（买卖双侧通用）*/}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">GitHub Stars</h3>
+          <span className="text-[10px] text-gray-400">买卖双侧通用 · 每周新增</span>
+          {demandUpdatedAt && (
+            <span className="text-[10px] text-gray-400">· 更新于 {fmtTime(demandUpdatedAt)}</span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'coinbase/x402', starsVal: demandData?.x402.stars, wow: history?.starWoW?.x402, href: 'https://github.com/coinbase/x402', sub: 'x402 协议官方仓库' },
+            { label: 'coinbase/agentkit', starsVal: demandData?.agentkit.stars, wow: history?.starWoW?.agentkit, href: 'https://github.com/coinbase/agentkit', sub: 'Agent 构建 SDK' },
+            { label: 'openclaw', starsVal: demandData?.openclaw.stars, wow: history?.starWoW?.openclaw, href: 'https://github.com/openclaw/openclaw', sub: 'Agent 运行时框架' },
+          ].map(({ label, starsVal, wow, href, sub }) => {
+            const wowPct = starWoWPct(wow ?? null)
+            const wowColor = wowPct == null ? '' : wowPct >= 0 ? 'text-green-600' : 'text-red-500'
+            return (
+              <div key={label} className="bg-gray-50 rounded-xl p-4">
+                <p className="text-[10px] text-gray-400 mb-1">{label}</p>
+                {demandLoading
+                  ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-1" />
+                  : (
+                    <div className="flex items-baseline gap-2 mb-0.5">
+                      <p className="text-xl font-bold text-black">{fmt(starsVal)}</p>
+                      {wowPct != null && (
+                        <span className={`text-[11px] font-semibold ${wowColor}`}>{fmtGrowth(wowPct)} WoW</span>
+                      )}
+                    </div>
+                  )
+                }
+                {wow && (
+                  <p className="text-[10px] text-gray-400">本周新增 {wow.lastWeek} · 上周 {wow.prevWeek}</p>
+                )}
+                <a href={href} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">{sub}</a>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* ── 1. Buyer 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="Buyer 侧" sub="AI Agent 生态 · 开发者采用率" badge="Live API" />
-        <DemandSection />
+        <SectionHeader title="Buyer 侧" sub="谁在付钱 · Agent 买家数据" badge="快照 + Live" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">x402scan 买方数</p>
+            <p className="text-xl font-bold text-black">{x402Stats ? fmtK(x402Stats.activeBuyers) : '—'}</p>
+            <p className="text-[10px] text-gray-400">几乎全为 AI Agent · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">Base 链 x402 24h 笔数</p>
+            <p className="text-xl font-bold text-black">{x402Stats ? fmtK(x402Stats.x402scanDailyTxCount) : '—'}</p>
+            <p className="text-[10px] text-gray-400">链上独立验证 · x402scan</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">Virtuals 已部署 Agent</p>
+            <p className="text-xl font-bold text-black">18K+</p>
+            <p className="text-[10px] text-gray-400">Agentic GDP $470M+ · 快照 2026-03-21</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">
+              AgentKit npm 周下载
+              <span className="ml-1 text-blue-500 text-[9px]">agent 构建者</span>
+            </p>
+            {demandLoading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <div className="flex items-baseline gap-2 mb-1">
+                  <p className="text-xl font-bold text-black">{fmt(demandData?.agentkit.npmWeekly)}</p>
+                  {demandData?.agentkit.npmGrowthPct != null && (
+                    <span className={`text-[11px] font-semibold ${demandData.agentkit.npmGrowthPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {fmtGrowth(demandData.agentkit.npmGrowthPct)} WoW
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            {history && <Sparkline data={history.agentkit} />}
+            <p className="text-[10px] text-gray-400 mt-1">含 x402 支付能力 · 月 {fmt(demandData?.agentkit.npmMonthly)}</p>
+          </div>
+        </div>
+        <div className="text-[11px] text-gray-400 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
+          Virtuals 自研 ACP 选择 x402 作为支付执行层（<code className="bg-white px-1 rounded">acp-x402.virtuals.io</code>），
+          每次 agent 雇佣任务 → x402 微支付 → Base 链 USDC 结算。
+          <strong className="text-gray-600">注：Virtuals ACP 与 Stripe/OpenAI 的 ACP 同名但完全不同。</strong>
+        </div>
       </div>
 
       {/* ── 2. Seller 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="Seller 侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
 
-        {/* x402scan 生态快照 */}
-        <div className="mb-4 bg-gray-50 rounded-lg px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
-              x402scan 独立链上索引 · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}
+        {/* 卖方数 + npm (server SDK) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">x402scan 卖方数</p>
+            <p className="text-xl font-bold text-black">{x402Stats ? x402Stats.activeSellers : '—'}</p>
+            <p className="text-[10px] text-gray-400">
+              active servers · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}
+              {x402Stats && ` · 官方月 ${fmtK(x402Stats.officialMonthlyTxCount)} 笔`}
             </p>
-            <a href="https://x402scan.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">实时榜单 ↗</a>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-            <div className="bg-white rounded-lg px-3 py-2 text-center">
-              <p className="text-[10px] text-gray-400 mb-0.5">官方月交易量</p>
-              <p className="text-lg font-bold text-black">
-                {x402Stats ? fmtK(x402Stats.officialMonthlyTxCount) : '75.4M'}
-              </p>
-              <p className="text-[10px] text-gray-400">x402.org Facilitator 上报</p>
-            </div>
-            <div className="bg-white rounded-lg px-3 py-2 text-center">
-              <p className="text-[10px] text-gray-400 mb-0.5">x402scan 24h 笔数</p>
-              <p className="text-lg font-bold text-black">
-                {x402Stats ? fmtK(x402Stats.x402scanDailyTxCount) : '65.3K'}
-              </p>
-              <p className="text-[10px] text-gray-400">链上独立验证</p>
-            </div>
-            <div className="bg-white rounded-lg px-3 py-2 text-center">
-              <p className="text-[10px] text-gray-400 mb-0.5">24h 成交额</p>
-              <p className="text-lg font-bold text-black">
-                {x402Stats ? fmtUSDK(x402Stats.x402scanDailyVolumeUsdc) : '$67.4K'}
-              </p>
-              <p className="text-[10px] text-gray-400">
-                {x402Stats
-                  ? `${x402Stats.activeSellers} sellers · ${fmtK(x402Stats.activeBuyers)} buyers`
-                  : '834 sellers · 3.77K buyers'
-                }
-              </p>
-            </div>
-            <div className="bg-white rounded-lg px-3 py-2 text-center">
-              <p className="text-[10px] text-gray-400 mb-0.5">最大 Server</p>
-              <p className="text-sm font-bold text-black leading-tight">
-                {x402Stats?.topServer.name ?? 'Virtuals Protocol'}
-              </p>
-              <p className="text-[10px] text-gray-400">
-                占 {x402Stats?.topServer.sharePct ?? 77}% 流量
-              </p>
-            </div>
+
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">
+              x402 npm 周下载
+              <span className="ml-1 text-orange-500 text-[9px]">server SDK</span>
+            </p>
+            {demandLoading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <div className="flex items-baseline gap-2 mb-1">
+                  <p className="text-xl font-bold text-black">{fmt(demandData?.x402.npmWeekly)}</p>
+                  {demandData?.x402.npmGrowthPct != null && (
+                    <span className={`text-[11px] font-semibold ${demandData.x402.npmGrowthPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {fmtGrowth(demandData.x402.npmGrowthPct)} WoW
+                    </span>
+                  )}
+                  {history && calcMoM(history.x402) != null && (
+                    <span className={`text-[11px] ${(calcMoM(history.x402) ?? 0) >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                      {fmtGrowth(calcMoM(history.x402))} MoM
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            {history && <Sparkline data={history.x402} />}
+            <p className="text-[10px] text-gray-400 mt-1">
+              <a href="https://www.npmjs.com/package/x402" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">x402</a>
+              {' '}· 基础协议库 · 月 {fmt(demandData?.x402.npmMonthly)}
+            </p>
           </div>
-          <p className="text-[10px] text-gray-400">官方数据约为 x402scan 的 5-10 倍（含 Facilitator 私下上报）。Buyers 少 = 买家几乎全是 AI Agent。</p>
+
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-[10px] text-gray-400 mb-1">
+              @coinbase/x402 npm 周下载
+              <span className="ml-1 text-orange-500 text-[9px]">server SDK</span>
+            </p>
+            {demandLoading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <div className="flex items-baseline gap-2 mb-1">
+                  <p className="text-xl font-bold text-black">{fmt(demandData?.x402.coinbaseX402Weekly)}</p>
+                  {history && calcMoM(history.coinbaseX402) != null && (
+                    <span className={`text-[11px] ${(calcMoM(history.coinbaseX402) ?? 0) >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                      {fmtGrowth(calcMoM(history.coinbaseX402))} MoM
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            {history && <Sparkline data={history.coinbaseX402} />}
+            <p className="text-[10px] text-gray-400 mt-1">
+              <a href="https://www.npmjs.com/package/@coinbase/x402" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@coinbase/x402</a>
+              {' '}· 官方 SDK · 月 {fmt(demandData?.x402.coinbaseX402Monthly)}
+            </p>
+          </div>
         </div>
 
         <div className="mb-4 bg-blue-50 rounded-lg px-4 py-3 text-xs text-gray-600 leading-relaxed">
@@ -845,33 +965,6 @@ export default function AiPaymentsPage() {
         </div>
       </div>
 
-      {/* ── 6. 最新进展 ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-baseline gap-3 mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">最新进展</h3>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">手动整理 · 截止 2026-03-21</span>
-          <span className="text-xs text-gray-400">协议发布 · 生态动态 · 机构采用</span>
-        </div>
-        <div className="space-y-2">
-          {NEWS_PLACEHOLDER.map((n, i) => (
-            <div key={i} className="flex gap-3 items-start border-b border-gray-50 pb-2">
-              <span className="text-[10px] text-gray-400 font-mono flex-shrink-0 pt-0.5 w-20">{n.date}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700">{n.title}</p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {n.tags.map(t => (
-                    <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{t}</span>
-                  ))}
-                  <span className="text-[10px] text-gray-400">via {n.source}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-gray-400">
-          人工整理的历史记录，非自动抓取。后续计划接入 RSS / API 实时追踪 x402、AP2、ACP、OpenClaw 等生态动态。
-        </p>
-      </div>
     </div>
   )
 }
