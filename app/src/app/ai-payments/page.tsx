@@ -353,7 +353,10 @@ function DemandSection() {
                   </div>
                 )
               }
-              <p className="text-[10px] text-gray-400 mt-1.5">x402 skill 总数追踪中（待 ClawHub 开放搜索 API）</p>
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                ClawHub 为 JS 渲染，无公开搜索 API，需人工追踪。{' '}
+                <a href="https://clawhub.ai/skills?nonSuspicious=true&q=pay" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">直接搜索 ↗</a>
+              </p>
             </div>
           </div>
         </div>
@@ -617,120 +620,13 @@ export default function AiPaymentsPage() {
       {/* 新闻 */}
       <NewsWidget title="AI 支付生态动态" category="ai-payments" />
 
-      {/* ── 1. 协议全景（顶部）──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="协议全景" sub="两条主轨道 · AP2 兼容层" />
-
-        {/* 两条主轨道说明 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          <div className="bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-700 text-[10px] font-bold">稳定币轨道</span>
-              <span className="text-sm font-bold text-gray-800">x402 + USDC</span>
-            </div>
-            <p className="text-[11px] text-gray-600 leading-relaxed">
-              链上结算，不可逆，适合 <strong>M2M 微支付（&lt;$0.01/次）</strong>。AI Agent 通过 Skill 调用 x402-gated API，
-              Facilitator 在 Base 链代付 USDC。
-            </p>
-          </div>
-          <div className="bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-700 text-[10px] font-bold">法币轨道</span>
-              <span className="text-sm font-bold text-gray-800">ACP + Stripe</span>
-            </div>
-            <p className="text-[11px] text-gray-600 leading-relaxed">
-              信用卡 / Apple Pay，可退款，适合<strong>对话式电商（大额消费）</strong>。ChatGPT / Perplexity 走此轨道。
-              Stripe 生成 SPT（单次限额 Token），agent 代用户结账。
-            </p>
-          </div>
-        </div>
-
-        {/* AP2 兼容层 */}
-        <div className="mb-4 bg-blue-50 rounded-lg px-4 py-2.5 text-[11px] text-blue-700">
-          <span className="font-semibold">AP2（Google）兼容层：</span>
-          企业级 agent 授权协议，60+ 机构联合背书，设计为<strong>兼容 x402 与 ACP 双轨</strong>——上层协议无关支付方式，
-          可将 x402 微支付或 ACP 法币结算作为子协议接入。规范阶段，尚未主网上线。
-        </div>
-
-        {/* 协议对比表 */}
-        <div className="space-y-2">
-          {PROTOCOLS.map(p => (
-            <div key={p.name} className={`border-l-4 ${p.color} bg-gray-50 rounded-r-lg px-4 py-2.5 flex gap-4 items-center`}>
-              <div className="w-32 flex-shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                  <span className={`text-[9px] px-1 py-0.5 rounded ${p.trackColor} font-medium`}>{p.track}</span>
-                </div>
-                <p className="text-[10px] text-gray-400">{p.by}</p>
-              </div>
-              <div className="flex-1 grid grid-cols-3 gap-2 text-xs">
-                <div><span className="text-gray-400">层级</span><p className="text-gray-700 font-medium">{p.layer}</p></div>
-                <div><span className="text-gray-400">结算</span><p className="text-gray-700">{p.settlement}</p></div>
-                <div><span className="text-gray-400">核心场景</span><p className="text-gray-700">{p.scene}</p></div>
-              </div>
-              <div className="flex-shrink-0">
-                {p.live
-                  ? <span className="flex items-center gap-1 text-[10px] text-green-600"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />已上线</span>
-                  : <span className="flex items-center gap-1 text-[10px] text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />规范阶段</span>
-                }
-              </div>
-            </div>
-          ))}
-        </div>
-
-      </div>
-
-      {/* ── 2. 架构说明 ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="稳定币路径架构" sub="Agent → Skill → x402 → USDC 完整链路" />
-
-        {/* 双向 Agent 经济流 */}
-        <div className="mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-center text-xs mb-2">
-            {[
-              { label: 'Agent A（Buyer）', sub: 'OpenClaw / Virtuals / AgentKit\n持有链上钱包，自主决策', color: 'bg-blue-50 border-blue-200' },
-              { label: '↕ x402 + Facilitator', sub: 'HTTP 402 · EIP-3009 签名\nBase 链 USDC · 亚秒级', color: 'bg-orange-50 border-orange-200' },
-              { label: 'Agent B（Seller）', sub: 'Skill 封装为 x402 服务\n自动接单 · 收款 · 继续执行', color: 'bg-green-50 border-green-200' },
-            ].map((s, i) => (
-              <div key={i} className={`rounded-lg border px-3 py-2.5 ${s.color}`}>
-                <p className="font-semibold text-gray-800">{s.label}</p>
-                <p className="text-gray-500 text-[10px] mt-0.5 whitespace-pre-line">{s.sub}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-gray-400 text-center">
-            同一个 Agent 可同时扮演两侧角色 · Firecrawl / Nansen 等传统 API 也是 Seller 侧 · 分润规则由各协议自定义
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
-          <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="font-semibold text-gray-700 mb-1">x402 在双向经济中的角色</p>
-            <p className="text-gray-500 leading-relaxed">
-              x402 是<strong>结算层协议</strong>——任何服务端加一层 402 中间件即可收费，无论是传统 API 还是 Agent Skill。
-              Buyer 发请求 → 返回 402 → Facilitator 代付 USDC → Seller 收款。
-              npm 下载量衡量的是<strong>服务端开发者采用率</strong>（Seller 侧），不是 Buyer 数量。
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="font-semibold text-gray-700 mb-1">OpenClaw + Virtuals：互补叠加</p>
-            <p className="text-gray-500 leading-relaxed">
-              OpenClaw = <strong>Agent 运行时</strong>（Skill 执行、本地优先、模型无关）。
-              Virtuals = <strong>Agent 经济层</strong>（链上身份、代币化、4 阶段 ACP 任务协调）。
-              2026.02 官方集成：OpenClaw Agent → Virtuals ACP 协调 → x402 结算。
-              <strong>主流路径 = 两者叠加</strong>，Agent 用 OpenClaw 跑任务，用 Virtuals ACP 赚钱。
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 3. Buyer 侧 ─────────────────────────────────────────────────────── */}
+      {/* ── 1. Buyer 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="Buyer 侧" sub="AI Agent 生态 · 开发者采用率" badge="Live API" />
         <DemandSection />
       </div>
 
-      {/* ── 4. Seller 侧 ─────────────────────────────────────────────────────── */}
+      {/* ── 2. Seller 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <SectionHeader title="Seller 侧" sub="谁在收钱 · payTo 地址追踪 → 链上可验证" badge="链上可追踪" />
 
@@ -795,6 +691,113 @@ export default function AiPaymentsPage() {
           <span className="font-semibold">V2 隐私机制：</span>
           90%+ 生产服务商使用 Facilitator（payTo → Facilitator 聚合地址），70%+ 使用 Dynamic payTo per-request 子地址。
           原始服务商钱包几乎不暴露。Firecrawl 被拦截（401 先于 402）是 auth 中间件在 x402 中间件之前的架构选择。
+        </div>
+      </div>
+
+      {/* ── 3. 协议全景 ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <SectionHeader title="协议全景" sub="两条主轨道 · AP2 兼容层" />
+
+        {/* 两条主轨道说明 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <div className="bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-700 text-[10px] font-bold">稳定币轨道</span>
+              <span className="text-sm font-bold text-gray-800">x402 + USDC</span>
+            </div>
+            <p className="text-[11px] text-gray-600 leading-relaxed">
+              链上结算，不可逆，适合 <strong>M2M 微支付（&lt;$0.01/次）</strong>。AI Agent 通过 Skill 调用 x402-gated API，
+              Facilitator 在 Base 链代付 USDC。
+            </p>
+          </div>
+          <div className="bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-700 text-[10px] font-bold">法币轨道</span>
+              <span className="text-sm font-bold text-gray-800">ACP + Stripe</span>
+            </div>
+            <p className="text-[11px] text-gray-600 leading-relaxed">
+              信用卡 / Apple Pay，可退款，适合<strong>对话式电商（大额消费）</strong>。ChatGPT / Perplexity 走此轨道。
+              Stripe 生成 SPT（单次限额 Token），agent 代用户结账。
+            </p>
+          </div>
+        </div>
+
+        {/* AP2 兼容层 */}
+        <div className="mb-4 bg-blue-50 rounded-lg px-4 py-2.5 text-[11px] text-blue-700">
+          <span className="font-semibold">AP2（Google）兼容层：</span>
+          企业级 agent 授权协议，60+ 机构联合背书，设计为<strong>兼容 x402 与 ACP 双轨</strong>——上层协议无关支付方式，
+          可将 x402 微支付或 ACP 法币结算作为子协议接入。规范阶段，尚未主网上线。
+        </div>
+
+        {/* 协议对比表 */}
+        <div className="space-y-2">
+          {PROTOCOLS.map(p => (
+            <div key={p.name} className={`border-l-4 ${p.color} bg-gray-50 rounded-r-lg px-4 py-2.5 flex gap-4 items-center`}>
+              <div className="w-32 flex-shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-gray-900">{p.name}</p>
+                  <span className={`text-[9px] px-1 py-0.5 rounded ${p.trackColor} font-medium`}>{p.track}</span>
+                </div>
+                <p className="text-[10px] text-gray-400">{p.by}</p>
+              </div>
+              <div className="flex-1 grid grid-cols-3 gap-2 text-xs">
+                <div><span className="text-gray-400">层级</span><p className="text-gray-700 font-medium">{p.layer}</p></div>
+                <div><span className="text-gray-400">结算</span><p className="text-gray-700">{p.settlement}</p></div>
+                <div><span className="text-gray-400">核心场景</span><p className="text-gray-700">{p.scene}</p></div>
+              </div>
+              <div className="flex-shrink-0">
+                {p.live
+                  ? <span className="flex items-center gap-1 text-[10px] text-green-600"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />已上线</span>
+                  : <span className="flex items-center gap-1 text-[10px] text-amber-600"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />规范阶段</span>
+                }
+              </div>
+            </div>
+          ))}
+        </div>
+
+      </div>
+
+      {/* ── 4. 架构说明 ─────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <SectionHeader title="稳定币路径架构" sub="Agent → Skill → x402 → USDC 完整链路" />
+
+        {/* 双向 Agent 经济流 */}
+        <div className="mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-center text-xs mb-2">
+            {[
+              { label: 'Agent A（Buyer）', sub: 'OpenClaw / Virtuals / AgentKit\n持有链上钱包，自主决策', color: 'bg-blue-50 border-blue-200' },
+              { label: '↕ x402 + Facilitator', sub: 'HTTP 402 · EIP-3009 签名\nBase 链 USDC · 亚秒级', color: 'bg-orange-50 border-orange-200' },
+              { label: 'Agent B（Seller）', sub: 'Skill 封装为 x402 服务\n自动接单 · 收款 · 继续执行', color: 'bg-green-50 border-green-200' },
+            ].map((s, i) => (
+              <div key={i} className={`rounded-lg border px-3 py-2.5 ${s.color}`}>
+                <p className="font-semibold text-gray-800">{s.label}</p>
+                <p className="text-gray-500 text-[10px] mt-0.5 whitespace-pre-line">{s.sub}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 text-center">
+            同一个 Agent 可同时扮演两侧角色 · Firecrawl / Nansen 等传统 API 也是 Seller 侧 · 分润规则由各协议自定义
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+          <div className="bg-gray-50 rounded-lg px-4 py-3">
+            <p className="font-semibold text-gray-700 mb-1">x402 在双向经济中的角色</p>
+            <p className="text-gray-500 leading-relaxed">
+              x402 是<strong>结算层协议</strong>——任何服务端加一层 402 中间件即可收费，无论是传统 API 还是 Agent Skill。
+              Buyer 发请求 → 返回 402 → Facilitator 代付 USDC → Seller 收款。
+              npm 下载量衡量的是<strong>服务端开发者采用率</strong>（Seller 侧），不是 Buyer 数量。
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg px-4 py-3">
+            <p className="font-semibold text-gray-700 mb-1">OpenClaw + Virtuals：互补叠加</p>
+            <p className="text-gray-500 leading-relaxed">
+              OpenClaw = <strong>Agent 运行时</strong>（Skill 执行、本地优先、模型无关）。
+              Virtuals = <strong>Agent 经济层</strong>（链上身份、代币化、4 阶段 ACP 任务协调）。
+              2026.02 官方集成：OpenClaw Agent → Virtuals ACP 协调 → x402 结算。
+              <strong>主流路径 = 两者叠加</strong>，Agent 用 OpenClaw 跑任务，用 Virtuals ACP 赚钱。
+            </p>
+          </div>
         </div>
       </div>
 
