@@ -15,6 +15,7 @@ import { VolumeComparisonChart } from '@/components/VolumeComparisonChart'
 import { RevenueAttributionChart } from '@/components/RevenueAttributionChart'
 import { USStablecoinEcosystem } from '@/components/USStablecoinEcosystem'
 import { CircleKeyMetricsTrend } from '@/components/CircleKeyMetricsTrend'
+import { NewsWidget } from '@/components/NewsWidget'
 
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -116,6 +117,9 @@ export default function UsdcPage() {
           )}
         </div>
       </div>
+
+      {/* 新闻 */}
+      <NewsWidget title="USDC / Circle 动态" category="usdc" />
 
       {/* M3.1 USDC 链上总览 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

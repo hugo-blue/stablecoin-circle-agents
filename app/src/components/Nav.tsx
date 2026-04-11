@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: '/', label: '宏观全景' },
   { href: '/usdc', label: 'USDC / Circle' },
   { href: '/ai-payments', label: 'AI 支付生态' },
+  { href: '/news', label: '新闻' },
 ]
 
 export function Nav() {

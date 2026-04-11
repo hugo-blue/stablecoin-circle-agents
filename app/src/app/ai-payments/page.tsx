@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react'
 import type { Provider } from '@/app/api/ai-payments/providers/route'
 import type { WeeklyDownload } from '@/app/api/ai-payments/demand-history/route'
+import { NewsWidget } from '@/components/NewsWidget'
+
+function fmtTime(iso: string): string {
+  return new Date(iso).toLocaleString('zh-CN', {
+    month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+}
 
 // ─── 协议全景（静态）────────────────────────────────────────────────────────────
 
@@ -600,8 +608,14 @@ export default function AiPaymentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">AI Agent 支付生态</h1>
-        <p className="text-sm text-gray-500 mt-1">协议全景 · Buyer 侧 · Seller 侧 · 基础设施 — 动态追踪视角</p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-sm text-gray-500">协议全景 · Buyer 侧 · Seller 侧 · 基础设施 — 动态追踪视角</p>
+          {x402Stats && <span className="text-xs text-gray-400">· 快照 {x402Stats.snapshotDate}</span>}
+        </div>
       </div>
+
+      {/* 新闻 */}
+      <NewsWidget title="AI 支付生态动态" category="ai-payments" />
 
       {/* ── 1. 协议全景（顶部）──────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">

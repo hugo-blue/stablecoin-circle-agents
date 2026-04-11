@@ -5,6 +5,7 @@ import { MetricCard } from '@/components/MetricCard'
 import { ChainHeatmap } from '@/components/ChainHeatmap'
 import { MintBurnChart } from '@/components/MintBurnChart'
 import { MarketShareChart } from '@/components/MarketShareChart'
+import { NewsWidget } from '@/components/NewsWidget'
 import type { StablecoinMarket, ChainDistribution, MultiCoinFlow } from '@/types'
 
 function fmtTime(iso: string): string {
@@ -80,6 +81,9 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* 新闻 */}
+      <NewsWidget title="最新动态" category="all" />
 
       {/* M1.1 核心指标卡 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
