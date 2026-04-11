@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Provider } from '@/app/api/ai-payments/providers/route'
 import type { WeeklyDownload } from '@/app/api/ai-payments/demand-history/route'
+import type { X402OnchainData, DailyTxCount } from '@/app/api/ai-payments/x402-onchain/route'
 import { NewsWidget } from '@/components/NewsWidget'
 
 function fmtTime(iso: string): string {
@@ -59,6 +60,28 @@ const PROTOCOLS = [
     live: true,
     color: 'border-l-gray-400',
   },
+  {
+    name: 'ERC-8004',
+    by: 'Ethereum EIP (2026.01)',
+    track: '身份层',
+    trackColor: 'bg-slate-100 text-slate-600',
+    layer: '身份层',
+    settlement: 'Ethereum 主网（链上 DID 锚定）',
+    scene: 'Agent 可验证身份 · 跨框架凭证 · 授权委托',
+    live: false,
+    color: 'border-l-slate-300',
+  },
+  {
+    name: 'ERC-8183',
+    by: 'Ethereum EIP (2026.03)',
+    track: '商务层',
+    trackColor: 'bg-indigo-100 text-indigo-700',
+    layer: '商务层',
+    settlement: 'EVM 通用（含 escrow 合约）',
+    scene: 'Agent 间自主雇佣 · 里程碑付款 · 链上争议解决',
+    live: false,
+    color: 'border-l-indigo-300',
+  },
 ]
 
 // ─── 基础设施（静态）────────────────────────────────────────────────────────────
@@ -71,14 +94,6 @@ const FACILITATORS = [
   { name: 'Mogami', by: 'Mogami', networks: 'Base / EVM', features: '开发者友好，Java SDK', free: true },
 ]
 
-const BASE_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const SOLANA_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
-
-const CONTRACT_ADDRS = [
-  { net: 'Base 主网', token: 'USDC', addr: BASE_USDC, scan: `https://basescan.org/token/${BASE_USDC}` },
-  { net: 'Solana', token: 'USDC', addr: SOLANA_USDC, scan: `https://solscan.io/token/${SOLANA_USDC}` },
-  { net: 'Base Sepolia', token: 'USDC (测试)', addr: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', scan: 'https://sepolia.basescan.org' },
-]
 
 const NEWS_PLACEHOLDER = [
   { date: '2026-03-18', title: 'Tempo (Stripe+Paradigm) 主网上线，MPP 协议正式发布', tags: ['MPP', 'Stripe', '主网'], source: 'Fortune' },
@@ -165,6 +180,33 @@ function calcMoM(weekly: WeeklyDownload[]): number | null {
 function Sparkline({ data }: { data: WeeklyDownload[] }) {
   if (data.length < 2) return <span className="text-gray-300 text-[10px]">—</span>
   const values = data.map(d => d.downloads)
+  const max = Math.max(...values)
+  const min = Math.min(...values)
+  const range = max - min || 1
+  const W = 72, H = 22
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W
+    const y = H - ((v - min) / range) * (H - 4) - 2
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  const rising = values[values.length - 1] >= values[0]
+  return (
+    <svg width={W} height={H} className="inline-block opacity-80">
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={rising ? '#22c55e' : '#ef4444'}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function OnchainSparkline({ data }: { data: DailyTxCount[] }) {
+  if (data.length < 2) return <span className="text-gray-300 text-[10px]">—</span>
+  const values = data.map(d => d.txCount)
   const max = Math.max(...values)
   const min = Math.min(...values)
   const range = max - min || 1
@@ -603,6 +645,8 @@ export default function AiPaymentsPage() {
   const [demandLoading, setDemandLoading] = useState(true)
   const [history, setHistory] = useState<HistoryData | null>(null)
   const [demandUpdatedAt, setDemandUpdatedAt] = useState<string | null>(null)
+  const [onchainData, setOnchainData] = useState<X402OnchainData | null>(null)
+  const [onchainLoading, setOnchainLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/ai-payments/x402-stats')
@@ -623,6 +667,12 @@ export default function AiPaymentsPage() {
       .then(r => r.json())
       .then(body => { if (body.state !== 'error') setHistory(body.data) })
       .catch(() => {})
+
+    fetch('/api/ai-payments/x402-onchain')
+      .then(r => r.json())
+      .then(body => { if (body.state === 'success') setOnchainData(body.data) })
+      .catch(() => {})
+      .finally(() => setOnchainLoading(false))
   }, [])
 
   return (
@@ -689,9 +739,26 @@ export default function AiPaymentsPage() {
             <p className="text-[10px] text-gray-400">几乎全为 AI Agent · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}</p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-[10px] text-gray-400 mb-1">Base 链 x402 24h 笔数</p>
-            <p className="text-xl font-bold text-black">{x402Stats ? fmtK(x402Stats.x402scanDailyTxCount) : '—'}</p>
-            <p className="text-[10px] text-gray-400">快照 {x402Stats?.snapshotDate ?? '2026-03-21'} · x402scan</p>
+            <p className="text-[10px] text-gray-400 mb-1">
+              CDP Facilitator 日均 tx
+              <span className="ml-1 text-blue-500 text-[9px]">链上</span>
+            </p>
+            {onchainLoading
+              ? <div className="h-6 bg-gray-200 rounded animate-pulse w-16 mb-2" />
+              : (
+                <p className="text-xl font-bold text-black mb-1">
+                  {onchainData
+                    ? fmtK(Math.round(onchainData.dailyTxCounts.reduce((s, d) => s + d.txCount, 0) / 30))
+                    : (x402Stats ? fmtK(x402Stats.x402scanDailyTxCount) : '—')}
+                </p>
+              )
+            }
+            {onchainData && <OnchainSparkline data={onchainData.dailyTxCounts} />}
+            <p className="text-[10px] text-gray-400 mt-1">
+              {onchainData
+                ? `Basescan 链上验证 · ${onchainData.activeAddresses}/${onchainData.totalAddresses} 地址活跃`
+                : `快照 ${x402Stats?.snapshotDate ?? '2026-03-21'} · x402scan`}
+            </p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">Virtuals 已部署 Agent</p>
@@ -923,55 +990,23 @@ export default function AiPaymentsPage() {
 
       {/* ── 5. 基础设施 ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="基础设施" sub="Facilitator · 链 · 合约地址" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">Facilitator（结算验证方）</p>
-            <div className="space-y-1.5">
-              {FACILITATORS.map(f => (
-                <div key={f.name} className="flex items-start justify-between gap-2 text-xs bg-gray-50 rounded-lg px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-800">{f.name}
-                      {f.free && <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700">免费</span>}
-                    </p>
-                    <p className="text-[10px] text-gray-400">{f.networks} · {f.features}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 bg-gray-100 rounded-lg px-3 py-2 text-[11px] text-gray-500">
-              <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。CDP Facilitator 使用轮转地址池（共 25 个 Base 地址），由{' '}
-              <a href="https://github.com/Merit-Systems/x402scan/blob/main/packages/external/facilitators/src/facilitators/coinbase.ts" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">x402scan 开源逆向</a>
-              {' '}发现。最早地址：<code className="bg-white px-1 rounded">0xdbdf3d…ba6</code>（2025-05-05）。
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">USDC 代币合约（结算资产，非 payTo）</p>
-            <div className="space-y-1.5">
-              {CONTRACT_ADDRS.map(c => (
-                <div key={c.net} className="bg-gray-50 rounded-lg px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{c.net} · {c.token}</span>
-                    <a href={c.scan} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">Scan ↗</a>
-                  </div>
-                  <p className="font-mono text-[10px] text-gray-600 mt-0.5 break-all">{c.addr}</p>
-                </div>
-              ))}
-              <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <span className="text-xs text-gray-500">CDP Facilitator 端点</span>
-                <p className="font-mono text-[10px] text-gray-600 mt-0.5 break-all">api.cdp.coinbase.com/platform/v2/x402</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">CDP Facilitator 链上地址（最早）</span>
-                  <a href="https://basescan.org/address/0xdbdf3d8ed80f84c35d01c6c9f9271761bad90ba6" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">Basescan ↗</a>
-                </div>
-                <p className="font-mono text-[10px] text-gray-600 mt-0.5 break-all">0xdbdf3d8ed80f84c35d01c6c9f9271761bad90ba6</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">轮转地址池共 25 个 · 2025-05-05 起 · x402scan 社区逆向发现</p>
+        <SectionHeader title="基础设施" sub="Facilitator · 结算验证方" />
+        <div className="space-y-1.5">
+          {FACILITATORS.map(f => (
+            <div key={f.name} className="flex items-start justify-between gap-2 text-xs bg-gray-50 rounded-lg px-3 py-2">
+              <div className="min-w-0">
+                <p className="font-medium text-gray-800">{f.name}
+                  {f.free && <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700">免费</span>}
+                </p>
+                <p className="text-[10px] text-gray-400">{f.networks} · {f.features}</p>
               </div>
             </div>
-          </div>
+          ))}
+        </div>
+        <div className="mt-2 bg-gray-100 rounded-lg px-3 py-2 text-[11px] text-gray-500">
+          <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。CDP Facilitator 使用轮转地址池（共 25 个 Base 地址），由{' '}
+          <a href="https://github.com/Merit-Systems/x402scan/blob/main/packages/external/facilitators/src/facilitators/coinbase.ts" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">x402scan 开源逆向</a>
+          {' '}发现，已通过 Basescan 链上数据验证。
         </div>
       </div>
 
