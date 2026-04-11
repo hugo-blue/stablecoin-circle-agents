@@ -304,7 +304,7 @@ function DemandSection() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Agent 生态 — 买卖双向参与</p>
-          {updatedAt && <span className="text-[10px] text-gray-400">· 更新于 {new Date(updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+          {updatedAt && <span className="text-[10px] text-gray-400">· 更新于 {new Date(updatedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
         </div>
         <p className="text-[11px] text-gray-400 mb-3">
           同一个 Agent 既是<strong>买家</strong>（调用外部 x402 API）也是<strong>卖家</strong>（把自己的 Skill 封装为 x402 服务出售）。
