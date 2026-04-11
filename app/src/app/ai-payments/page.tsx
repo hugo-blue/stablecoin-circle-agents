@@ -681,7 +681,7 @@ export default function AiPaymentsPage() {
 
       {/* ── 1. Buyer 侧 ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <SectionHeader title="Buyer 侧" sub="谁在付钱 · Agent 买家数据" badge="快照 + Live" />
+        <SectionHeader title="Buyer 侧" sub="谁在付钱 · Agent 买家数据" badge="快照" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">x402scan 买方数</p>
@@ -691,7 +691,7 @@ export default function AiPaymentsPage() {
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">Base 链 x402 24h 笔数</p>
             <p className="text-xl font-bold text-black">{x402Stats ? fmtK(x402Stats.x402scanDailyTxCount) : '—'}</p>
-            <p className="text-[10px] text-gray-400">链上独立验证 · x402scan</p>
+            <p className="text-[10px] text-gray-400">快照 {x402Stats?.snapshotDate ?? '2026-03-21'} · x402scan</p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">Virtuals 已部署 Agent</p>
@@ -940,7 +940,9 @@ export default function AiPaymentsPage() {
               ))}
             </div>
             <div className="mt-2 bg-gray-100 rounded-lg px-3 py-2 text-[11px] text-gray-500">
-              <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。CDP Facilitator 提交地址未公开，待从已知 x402 交易中反向提取。
+              <span className="font-medium">链上追踪：</span>Facilitator 不持有资金，USDC 直接转入 payTo 地址。CDP Facilitator 使用轮转地址池（共 25 个 Base 地址），由{' '}
+              <a href="https://github.com/Merit-Systems/x402scan/blob/main/packages/external/facilitators/src/facilitators/coinbase.ts" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">x402scan 开源逆向</a>
+              {' '}发现。最早地址：<code className="bg-white px-1 rounded">0xdbdf3d…ba6</code>（2025-05-05）。
             </div>
           </div>
 
@@ -959,6 +961,14 @@ export default function AiPaymentsPage() {
               <div className="bg-gray-50 rounded-lg px-3 py-2">
                 <span className="text-xs text-gray-500">CDP Facilitator 端点</span>
                 <p className="font-mono text-[10px] text-gray-600 mt-0.5 break-all">api.cdp.coinbase.com/platform/v2/x402</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">CDP Facilitator 链上地址（最早）</span>
+                  <a href="https://basescan.org/address/0xdbdf3d8ed80f84c35d01c6c9f9271761bad90ba6" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline">Basescan ↗</a>
+                </div>
+                <p className="font-mono text-[10px] text-gray-600 mt-0.5 break-all">0xdbdf3d8ed80f84c35d01c6c9f9271761bad90ba6</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">轮转地址池共 25 个 · 2025-05-05 起 · x402scan 社区逆向发现</p>
               </div>
             </div>
           </div>
