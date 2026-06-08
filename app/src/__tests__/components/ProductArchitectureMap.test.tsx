@@ -29,8 +29,8 @@ describe('ProductArchitectureMap', () => {
 
   it('shows metric values for nodes', () => {
     render(<ProductArchitectureMap nodes={PRODUCT_NODES} />)
-    expect(screen.getByText('$75.3B')).toBeInTheDocument()
-    expect(screen.getByText('$126B')).toBeInTheDocument()
+    expect(screen.getByText('$77.0B')).toBeInTheDocument()
+    expect(screen.getByText('$175B')).toBeInTheDocument()
   })
 
   it('shows testnet badges for non-live products', () => {

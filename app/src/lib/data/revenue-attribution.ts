@@ -6,13 +6,14 @@
  * and public fee schedules.
  *
  * Sources:
+ * - Q1 2026 earnings press release + call transcript (filed 2026-05-11)
  * - 10-K FY2025 (filed 2026-02-25)
  * - Q4 2025 earnings call transcript (2026-02-25)
  * - S-1/A (filed 2025-05)
  * - Circle developer docs (CCTP fee schedule)
  * - Circle Help Center (Mint fee schedule)
  *
- * Last updated: 2026-03-16
+ * Last updated: 2026-06-08
  */
 
 // =============================================================================
@@ -63,6 +64,7 @@ export const RESERVE_RETURN_RATES: Record<string, number> = {
   '2025-Q2': 0.0415,  // estimated
   '2025-Q3': 0.0415,  // 10-Q: "4.15% reserve return rate"
   '2025-Q4': 0.0381,  // 10-K: "3.81%, down 68bps YoY"
+  '2026-Q1': 0.0350,  // Q1 2026 EPR: "3.5% reserve return rate, down 66bps YoY"
 }
 
 /**
@@ -328,6 +330,41 @@ export const OTHER_REVENUE_BREAKDOWN_Q4_2025 = {
   fy2026Guidance: { low: 150_000_000, high: 170_000_000 },
 }
 
+/**
+ * Q1 2026 Other Revenue: $42M total (roughly doubled YoY)
+ *
+ * Reported splits (Q1 2026 EPR / earnings call):
+ * A. Subscription & Services Revenue: $34.9M
+ *    - "primarily from blockchain network partnerships" (L1/L2 native USDC fees)
+ *    - USYC asset management fees + Circle Mint platform fees (smaller)
+ * B. Transaction Revenue: $6.7M
+ *    - Expected decline vs Q4 2025, which had a ~$7M one-time Canton Coin benefit
+ *    - CCTP Fast Transfer fees, Mint fast redemption fees, CPN transaction fees
+ *
+ * FY2026 Guidance reaffirmed: $150-170M total other revenue
+ */
+export const OTHER_REVENUE_BREAKDOWN_Q1_2026 = {
+  total: 41_600_000,            // subscription $34.9M + transaction $6.7M
+  subscription: {
+    total: 34_900_000,
+    components: {
+      blockchainPartnershipFees: 30_000_000,  // estimated majority
+      usycManagementFees: 2_400_000,          // estimated
+      mintPlatformFees: 2_500_000,            // estimated remainder
+    },
+  },
+  transaction: {
+    total: 6_700_000,
+    components: {
+      cctpFastTransferFees: 3_500_000,        // estimated
+      mintFastRedemptionFees: 1_500_000,      // estimated
+      cpnTransactionFees: 1_000_000,          // estimated, early stage
+      otherTransactionFees: 700_000,          // estimated remainder
+    },
+  },
+  fy2026Guidance: { low: 150_000_000, high: 170_000_000 },
+}
+
 // =============================================================================
 // 6. RATE SENSITIVITY MODEL
 // =============================================================================
@@ -489,3 +526,56 @@ export const Q4_2025_ATTRIBUTION = {
     onchainTxVolume: 11_900_000_000_000,
   },
 }
+
+/**
+ * Q1 2026 Revenue Attribution Summary (three months ended March 31, 2026)
+ *
+ * Total Revenue: $694.0M (+20% YoY)
+ *   Reserve Income: $652.4M (94.0%)
+ *     - Reserve return rate: 3.50% (down 66bps YoY, lower SOFR)
+ *     - Avg USDC circulation: $75.2B (+39% YoY)
+ *     - Distribution costs: $407.0M (62.4% of reserve income, +17% YoY)
+ *     - Net reserve income: $245.4M
+ *
+ *   Other Revenue: $41.6M (6.0%)
+ *     - Subscription/services: $34.9M
+ *     - Transaction revenue: $6.7M
+ *
+ * RLDC Margin: 41.4% (Q1 2026, +148bps YoY)
+ * Adjusted EBITDA: $151M (+24% YoY, 53% margin on RLDC)
+ * Net income from continuing operations: $55M (-15% YoY)
+ */
+export const Q1_2026_ATTRIBUTION = {
+  totalRevenue: 694_000_000,
+  reserveIncome: {
+    gross: 652_400_000,
+    returnRate: 0.0350,
+    avgCirculation: 75_200_000_000,
+    distributionCosts: 407_000_000,
+    distributionPctOfReserve: 62.4,
+    net: 245_400_000,
+  },
+  otherRevenue: {
+    total: 41_600_000,
+    subscriptionServices: 34_900_000,
+    transactionRevenue: 6_700_000,
+  },
+  rldcMarginPct: 41.4,
+  adjustedEbitda: 151_000_000,
+  // Product volume metrics (not directly revenue)
+  productVolumes: {
+    cctpVolume: 49_200_000_000,
+    cctpBridgeMarketShare: 60,
+    cpnAnnualizedTpv: 8_300_000_000,
+    mintRedeemVolume: 145_000_000_000,           // $73B minted + $72B redeemed
+    onchainTxVolume: 21_500_000_000_000,         // USDC on-chain transaction volume, +263% YoY
+    stablecoinVolumeMarketShare: 63,             // % of stablecoin transaction volume (Visa Onchain Analytics)
+  },
+}
+
+/**
+ * Convenience aliases pointing at the most recently reported quarter.
+ * Repoint these whenever a newer quarter is appended above.
+ */
+export const LATEST_ATTRIBUTION = Q1_2026_ATTRIBUTION
+export const LATEST_OTHER_REVENUE = OTHER_REVENUE_BREAKDOWN_Q1_2026

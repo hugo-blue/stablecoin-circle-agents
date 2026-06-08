@@ -18,7 +18,7 @@ describe('CPNNetworkCard', () => {
 
   it('shows annualized TPV', () => {
     render(<CPNNetworkCard data={CPN_DATA} />)
-    expect(screen.getByText('$5.70B')).toBeInTheDocument()
+    expect(screen.getByText('$8.30B')).toBeInTheDocument()
   })
 
   it('shows settlement chains', () => {

@@ -8,14 +8,15 @@ import type { CCTPMetrics, CPNData, NanopaymentsData, ProductNode } from '@/type
  * - CPN: Circle press releases, earnings call (Feb 2026)
  * - Nanopayments: Circle blog (March 2026)
  * - Contract addresses: developers.circle.com
+ * - Q1 2026 metrics: Q1 2026 earnings press release + call (2026-05-11)
  *
- * Last updated: 2026-03-16
+ * Last updated: 2026-06-08
  */
 
 export const CCTP_METRICS: CCTPMetrics = {
-  cumulativeVolumeUsd: 126_000_000_000,
+  cumulativeVolumeUsd: 175_200_000_000, // +$49.2B from Q1 2026
   q4VolumeUsd: 41_300_000_000,
-  totalTransfers: 6_000_000,
+  totalTransfers: 8_300_000, // estimated, scaled with cumulative volume
   bridgedUsdcPct: 50,
   supportedChains: 17,
   contractAddresses: {
@@ -41,13 +42,14 @@ export const CCTP_METRICS: CCTPMetrics = {
     { period: '2025-Q2', volumeUsd: 24_100_000_000, txCount: 1_780_000 },
     { period: '2025-Q3', volumeUsd: 31_800_000_000, txCount: 2_100_000 },
     { period: '2025-Q4', volumeUsd: 41_300_000_000, txCount: 2_520_000, yoyGrowth: 268.8 },
+    { period: '2026-Q1', volumeUsd: 49_200_000_000, txCount: 3_000_000, yoyGrowth: 164.5 }, // txCount estimated; ~3.0x YoY per earnings
   ],
 }
 
 export const CPN_DATA: CPNData = {
   enrolledInstitutions: 55,
   inReviewInstitutions: 74,
-  annualizedTpvUsd: 5_700_000_000,
+  annualizedTpvUsd: 8_300_000_000, // as of 2026-03-31 (trailing 30-day, Q1 2026 EPR)
   settlementChains: ['Ethereum', 'Polygon', 'Solana'],
   livePartners: ['Alfred Pay', 'Tazapay', 'RedotPay', 'Conduit'],
   designPartners: [
@@ -80,7 +82,7 @@ export const PRODUCT_NODES: ProductNode[] = [
     nameCn: 'USDC 稳定币',
     layer: 'asset',
     metricLabel: '流通量',
-    metricValue: '$75.3B',
+    metricValue: '$77.0B',
     status: 'live',
   },
   {
@@ -88,8 +90,8 @@ export const PRODUCT_NODES: ProductNode[] = [
     name: 'Circle Mint',
     nameCn: '机构铸造/赎回',
     layer: 'infra',
-    metricLabel: 'Q4 铸赎量',
-    metricValue: '$163B',
+    metricLabel: 'Q1 铸赎量',
+    metricValue: '$145B',
     status: 'live',
   },
   {
@@ -98,7 +100,7 @@ export const PRODUCT_NODES: ProductNode[] = [
     nameCn: '跨链转账协议',
     layer: 'infra',
     metricLabel: '累计交易量',
-    metricValue: '$126B',
+    metricValue: '$175B',
     status: 'live',
   },
   {
@@ -116,7 +118,7 @@ export const PRODUCT_NODES: ProductNode[] = [
     nameCn: '机构支付网络',
     layer: 'network',
     metricLabel: '年化 TPV',
-    metricValue: '$5.7B',
+    metricValue: '$8.3B',
     status: 'live',
   },
   {

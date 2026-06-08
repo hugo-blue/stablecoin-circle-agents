@@ -7,6 +7,7 @@ import type { CircleFinancial } from '@/types'
  * - S-1 (filed 2025-04-01): FY2022, FY2023, FY2024 audited + Q1 2025 unaudited
  * - 10-Q (Q2 2025, Q3 2025): SEC EDGAR
  * - 10-K (FY2025): filed 2026-02-25
+ * - 10-Q (Q1 2026): SEC EDGAR / Q1 2026 earnings press release (filed 2026-05-11)
  *
  * IPO: June 5, 2025 at $31/share on NYSE
  *
@@ -15,7 +16,7 @@ import type { CircleFinancial } from '@/types'
  * - Off-platform USDC: 50/50 split between Circle and Coinbase
  * - 2024: Coinbase received $908M of $1.011B total distribution costs
  *
- * Last updated: 2026-03-15
+ * Last updated: 2026-06-08
  */
 export const CIRCLE_FINANCIALS: CircleFinancial[] = [
   // --- FY2024 Quarterly (from S-1 prospectus) ---
@@ -83,6 +84,15 @@ export const CIRCLE_FINANCIALS: CircleFinancial[] = [
     coinbaseShareUsd: null, netIncomeUsd: 133_000_000,
     netMarginPct: 17.3, usdcCirculatingUsd: 75_300_000_000,
     source: '10-K',
+  },
+  // --- FY2026 Quarterly (from SEC filings) ---
+  {
+    period: '2026-Q1', periodType: 'Q',
+    revenueUsd: 694_000_000, reserveIncomeUsd: 652_400_000,
+    otherRevenueUsd: 41_600_000, distributionCostsUsd: 407_000_000, // total distribution, transaction & other costs
+    coinbaseShareUsd: null, netIncomeUsd: 55_000_000, // net income from continuing operations
+    netMarginPct: 7.9, usdcCirculatingUsd: 77_000_000_000,
+    source: '10-Q',
   },
 ]
 

@@ -9,14 +9,14 @@ describe('CCTPFlowDashboard', () => {
   it('renders headline metrics', () => {
     render(<CCTPFlowDashboard data={CCTP_METRICS} />)
     expect(screen.getByText('CCTP 跨链转账')).toBeInTheDocument()
-    expect(screen.getByText('$126.00B')).toBeInTheDocument()
+    expect(screen.getByText('$175.20B')).toBeInTheDocument()
     expect(screen.getByText('$41.30B')).toBeInTheDocument()
   })
 
   it('renders summary metric cards', () => {
     render(<CCTPFlowDashboard data={CCTP_METRICS} />)
     expect(screen.getByText('累计交易量')).toBeInTheDocument()
-    expect(screen.getByText('6M+')).toBeInTheDocument()
+    expect(screen.getByText('8M+')).toBeInTheDocument()
     expect(screen.getByText('50%')).toBeInTheDocument()
   })
 
@@ -41,6 +41,6 @@ describe('CCTPFlowDashboard', () => {
 
   it('shows supported chains in subtitle', () => {
     render(<CCTPFlowDashboard data={CCTP_METRICS} />)
-    expect(screen.getByText(/17/)).toBeInTheDocument()
+    expect(screen.getByText(/17 条链/)).toBeInTheDocument()
   })
 })
