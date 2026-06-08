@@ -546,6 +546,8 @@ export const Q4_2025_ATTRIBUTION = {
  * Net income from continuing operations: $55M (-15% YoY)
  */
 export const Q1_2026_ATTRIBUTION = {
+  period: '2026-Q1',
+  periodLabel: 'Q1 2026',
   totalRevenue: 694_000_000,
   reserveIncome: {
     gross: 652_400_000,

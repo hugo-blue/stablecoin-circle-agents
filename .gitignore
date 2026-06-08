@@ -45,6 +45,7 @@ scripts/node_modules/
 !app/README.md
 !README.md
 !docs/**/*.md
+!scripts/auto-update-circle-data.md
 !CLAUDE.md
 !stablecoin-prd.md
 !test-completeness.md

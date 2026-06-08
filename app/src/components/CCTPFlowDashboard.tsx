@@ -41,6 +41,10 @@ export function CCTPFlowDashboard({ data }: CCTPFlowDashboardProps) {
     pctOfTotal: p.pctOfTotal,
   }))
 
+  // Latest quarter is the last entry in the quarterly series — UI follows it automatically.
+  const latestQ = data.quarterly[data.quarterly.length - 1]
+  const latestQLabel = latestQ ? latestQ.period.replace('-Q', ' Q') : ''
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-1">
@@ -73,7 +77,11 @@ export function CCTPFlowDashboard({ data }: CCTPFlowDashboardProps) {
       {/* Summary metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-4">
         <MiniMetric label="累计交易量" value={formatUSD(data.cumulativeVolumeUsd)} />
-        <MiniMetric label="Q4 2025" value={formatUSD(data.q4VolumeUsd)} sub="YoY +269%" />
+        <MiniMetric
+          label={latestQLabel}
+          value={formatUSD(latestQ?.volumeUsd ?? data.q4VolumeUsd)}
+          sub={latestQ?.yoyGrowth != null ? `YoY +${Math.round(latestQ.yoyGrowth)}%` : undefined}
+        />
         <MiniMetric label="总转账次数" value={`${(data.totalTransfers / 1e6).toFixed(0)}M+`} />
         <MiniMetric label="桥接 USDC 占比" value={`${data.bridgedUsdcPct}%`} />
       </div>
@@ -106,7 +114,7 @@ export function CCTPFlowDashboard({ data }: CCTPFlowDashboardProps) {
       <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400">
         <span>TokenMessenger: <code className="text-gray-500">0x28b5...cf5d</code></span>
         <span>MessageTransmitter: <code className="text-gray-500">0x81D4...B64</code></span>
-        <span className="ml-auto">所有 EVM 链统一地址 | 数据来源：Circle Q4 2025 财报</span>
+        <span className="ml-auto">所有 EVM 链统一地址 | 数据来源：Circle Q1 2026 财报</span>
       </div>
     </div>
   )

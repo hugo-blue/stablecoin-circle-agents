@@ -86,7 +86,7 @@ export function VolumeComparisonChart({ tradingVolumes, isLoading }: VolumeCompa
         <div className="rounded-lg bg-blue-50 px-3 py-2 border border-blue-100">
           <p className="text-xs text-blue-600 font-medium">USDC 链上占比</p>
           <p className="text-xl font-bold text-blue-700">{usdcShare}%</p>
-          <p className="text-xs text-blue-500">2026-02 调整后</p>
+          <p className="text-xs text-blue-500">{latest?.month ?? ''} 调整后</p>
         </div>
         <div className="rounded-lg bg-gray-50 px-3 py-2">
           <p className="text-xs text-gray-600 font-medium">USDC 2025 链上</p>
@@ -182,7 +182,7 @@ function InsightView() {
     },
     {
       dimension: '市值',
-      usdc: '$78B',
+      usdc: '$77B',
       usdt: '$145B',
       winner: 'USDT',
       why: 'USDT 在新兴市场（亚洲、非洲、拉美）渗透率高',

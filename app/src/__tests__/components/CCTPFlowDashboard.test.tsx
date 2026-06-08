@@ -10,7 +10,9 @@ describe('CCTPFlowDashboard', () => {
     render(<CCTPFlowDashboard data={CCTP_METRICS} />)
     expect(screen.getByText('CCTP 跨链转账')).toBeInTheDocument()
     expect(screen.getByText('$175.20B')).toBeInTheDocument()
-    expect(screen.getByText('$41.30B')).toBeInTheDocument()
+    // Latest quarter volume is derived from the last `quarterly` entry
+    const latest = CCTP_METRICS.quarterly[CCTP_METRICS.quarterly.length - 1]
+    expect(screen.getByText(`$${(latest.volumeUsd / 1e9).toFixed(2)}B`)).toBeInTheDocument()
   })
 
   it('renders summary metric cards', () => {

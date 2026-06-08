@@ -5,9 +5,10 @@
  * "Adjusted" = excludes bot activity, internal transfers, non-economic activity
  *
  * Key finding: USDC surpassed USDT in adjusted on-chain volume for the
- * first time since 2019. The shift became clear in 2025.
+ * first time since 2019. The shift became clear in 2025 and widened in Q1 2026
+ * (Mizuho: YTD adjusted volume USDC ~$2.2T vs USDT ~$1.3T, ~64% USDC share).
  *
- * Last updated: 2026-03-16
+ * Last updated: 2026-06-08
  */
 
 export interface OnchainVolumeMonthly {
@@ -33,20 +34,22 @@ export const ONCHAIN_VOLUME_MONTHLY: OnchainVolumeMonthly[] = [
   { month: '2025-12', usdcVolumeUsd: 1_950_000_000_000, usdtVolumeUsd: 1_100_000_000_000 },
   // 2026
   { month: '2026-01', usdcVolumeUsd: 980_000_000_000, usdtVolumeUsd: 520_000_000_000 },
-  { month: '2026-02', usdcVolumeUsd: 1_260_000_000_000, usdtVolumeUsd: 514_000_000_000 },
+  { month: '2026-02', usdcVolumeUsd: 1_260_000_000_000, usdtVolumeUsd: 514_000_000_000 }, // Allium record: $1.8T total, USDC ~70%
+  { month: '2026-03', usdcVolumeUsd: 1_300_000_000_000, usdtVolumeUsd: 530_000_000_000 }, // estimated pending Allium monthly release
 ]
 
-/** Annual summary */
+/** Annual / period summary */
 export const ONCHAIN_VOLUME_ANNUAL = {
   2025: {
     usdc: 18_300_000_000_000,
     usdt: 13_200_000_000_000,
     usdcSharePct: 58.1,
   },
-  '2026-YTD': {
-    usdc: 2_240_000_000_000,
-    usdt: 1_034_000_000_000,
-    usdcSharePct: 68.4,
+  // Q1 2026 adjusted (Mizuho Research): USDC overtook USDT YTD for the first time since 2019
+  '2026-Q1': {
+    usdc: 2_200_000_000_000,
+    usdt: 1_300_000_000_000,
+    usdcSharePct: 64.0,
   },
 }
 
