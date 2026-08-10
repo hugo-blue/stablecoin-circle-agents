@@ -13,12 +13,12 @@ describe('CPNNetworkCard', () => {
 
   it('shows enrolled institutions count', () => {
     render(<CPNNetworkCard data={CPN_DATA} />)
-    expect(screen.getByText('55')).toBeInTheDocument()
+    expect(screen.getByText('175')).toBeInTheDocument()
   })
 
   it('shows annualized TPV', () => {
     render(<CPNNetworkCard data={CPN_DATA} />)
-    expect(screen.getByText('$8.30B')).toBeInTheDocument()
+    expect(screen.getByText('$14.70B')).toBeInTheDocument()
   })
 
   it('shows settlement chains', () => {

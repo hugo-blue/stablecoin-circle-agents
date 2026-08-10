@@ -5,10 +5,12 @@
  * "Adjusted" = excludes bot activity, internal transfers, non-economic activity
  *
  * Key finding: USDC surpassed USDT in adjusted on-chain volume for the
- * first time since 2019. The shift became clear in 2025 and widened in Q1 2026
- * (Mizuho: YTD adjusted volume USDC ~$2.2T vs USDT ~$1.3T, ~64% USDC share).
+ * first time since 2019. The shift became clear in 2025 and widened through
+ * H1 2026 (Mizuho: H1 adjusted volume $8.82T total, USDC ~70% vs USDT ~25%).
+ * June 2026 set a record $1.79T total adjusted stablecoin volume (Visa/Allium),
+ * with USDC ~67% and USDT ~32%.
  *
- * Last updated: 2026-06-08
+ * Last updated: 2026-08-10
  */
 
 export interface OnchainVolumeMonthly {
@@ -36,6 +38,9 @@ export const ONCHAIN_VOLUME_MONTHLY: OnchainVolumeMonthly[] = [
   { month: '2026-01', usdcVolumeUsd: 980_000_000_000, usdtVolumeUsd: 520_000_000_000 },
   { month: '2026-02', usdcVolumeUsd: 1_260_000_000_000, usdtVolumeUsd: 514_000_000_000 }, // Allium record: $1.8T total, USDC ~70%
   { month: '2026-03', usdcVolumeUsd: 1_300_000_000_000, usdtVolumeUsd: 530_000_000_000 }, // estimated pending Allium monthly release
+  { month: '2026-04', usdcVolumeUsd: 1_280_000_000_000, usdtVolumeUsd: 550_000_000_000 }, // estimated
+  { month: '2026-05', usdcVolumeUsd: 1_240_000_000_000, usdtVolumeUsd: 560_000_000_000 }, // estimated
+  { month: '2026-06', usdcVolumeUsd: 1_200_000_000_000, usdtVolumeUsd: 570_000_000_000 }, // June record $1.79T total adjusted (Visa/Allium), USDC ~67% / USDT ~32%
 ]
 
 /** Annual / period summary */
@@ -50,6 +55,12 @@ export const ONCHAIN_VOLUME_ANNUAL = {
     usdc: 2_200_000_000_000,
     usdt: 1_300_000_000_000,
     usdcSharePct: 64.0,
+  },
+  // H1 2026 adjusted (Mizuho Research): $8.82T total, USDC ~70% vs USDT ~25%
+  '2026-H1': {
+    usdc: 6_170_000_000_000,   // 70% of $8.82T
+    usdt: 2_210_000_000_000,   // 25% of $8.82T
+    usdcSharePct: 70.0,
   },
 }
 

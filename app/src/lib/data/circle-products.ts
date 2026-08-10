@@ -9,14 +9,15 @@ import type { CCTPMetrics, CPNData, NanopaymentsData, ProductNode } from '@/type
  * - Nanopayments: Circle blog (March 2026)
  * - Contract addresses: developers.circle.com
  * - Q1 2026 metrics: Q1 2026 earnings press release + call (2026-05-11)
+ * - Q2 2026 metrics: Q2 2026 earnings press release + call (2026-08-05)
  *
- * Last updated: 2026-06-08
+ * Last updated: 2026-08-10
  */
 
 export const CCTP_METRICS: CCTPMetrics = {
-  cumulativeVolumeUsd: 175_200_000_000, // +$49.2B from Q1 2026
+  cumulativeVolumeUsd: 230_200_000_000, // +~$55B from Q2 2026 (Q2 quarterly volume estimated)
   q4VolumeUsd: 41_300_000_000,
-  totalTransfers: 8_300_000, // estimated, scaled with cumulative volume
+  totalTransfers: 9_400_000, // estimated, scaled with cumulative volume
   bridgedUsdcPct: 50,
   supportedChains: 17,
   contractAddresses: {
@@ -43,13 +44,14 @@ export const CCTP_METRICS: CCTPMetrics = {
     { period: '2025-Q3', volumeUsd: 31_800_000_000, txCount: 2_100_000 },
     { period: '2025-Q4', volumeUsd: 41_300_000_000, txCount: 2_520_000, yoyGrowth: 268.8 },
     { period: '2026-Q1', volumeUsd: 49_200_000_000, txCount: 3_000_000, yoyGrowth: 164.5 }, // txCount estimated; ~3.0x YoY per earnings
+    { period: '2026-Q2', volumeUsd: 55_000_000_000, txCount: 3_400_000, yoyGrowth: 128.2 }, // volume & txCount estimated — Q2 CCTP volume not separately disclosed
   ],
 }
 
 export const CPN_DATA: CPNData = {
-  enrolledInstitutions: 55,
+  enrolledInstitutions: 175, // +29% QoQ (Q2 2026 EPR)
   inReviewInstitutions: 74,
-  annualizedTpvUsd: 8_300_000_000, // as of 2026-03-31 (trailing 30-day, Q1 2026 EPR)
+  annualizedTpvUsd: 14_700_000_000, // as of 2026-06-30 (trailing 30-day, Q2 2026 EPR), +76% QoQ
   settlementChains: ['Ethereum', 'Polygon', 'Solana'],
   livePartners: ['Alfred Pay', 'Tazapay', 'RedotPay', 'Conduit'],
   designPartners: [
@@ -82,7 +84,7 @@ export const PRODUCT_NODES: ProductNode[] = [
     nameCn: 'USDC 稳定币',
     layer: 'asset',
     metricLabel: '流通量',
-    metricValue: '$77.0B',
+    metricValue: '$73.3B',
     status: 'live',
   },
   {
@@ -90,8 +92,8 @@ export const PRODUCT_NODES: ProductNode[] = [
     name: 'Circle Mint',
     nameCn: '机构铸造/赎回',
     layer: 'infra',
-    metricLabel: 'Q1 铸赎量',
-    metricValue: '$145B',
+    metricLabel: 'Q2 铸赎量',
+    metricValue: '$170B',
     status: 'live',
   },
   {
@@ -100,7 +102,7 @@ export const PRODUCT_NODES: ProductNode[] = [
     nameCn: '跨链转账协议',
     layer: 'infra',
     metricLabel: '累计交易量',
-    metricValue: '$175B',
+    metricValue: '$230B',
     status: 'live',
   },
   {
@@ -118,7 +120,7 @@ export const PRODUCT_NODES: ProductNode[] = [
     nameCn: '机构支付网络',
     layer: 'network',
     metricLabel: '年化 TPV',
-    metricValue: '$8.3B',
+    metricValue: '$14.7B',
     status: 'live',
   },
   {

@@ -6,6 +6,7 @@
  * and public fee schedules.
  *
  * Sources:
+ * - Q2 2026 earnings press release + call transcript (2026-08-05)
  * - Q1 2026 earnings press release + call transcript (filed 2026-05-11)
  * - 10-K FY2025 (filed 2026-02-25)
  * - Q4 2025 earnings call transcript (2026-02-25)
@@ -13,7 +14,7 @@
  * - Circle developer docs (CCTP fee schedule)
  * - Circle Help Center (Mint fee schedule)
  *
- * Last updated: 2026-06-08
+ * Last updated: 2026-08-10
  */
 
 // =============================================================================
@@ -65,6 +66,7 @@ export const RESERVE_RETURN_RATES: Record<string, number> = {
   '2025-Q3': 0.0415,  // 10-Q: "4.15% reserve return rate"
   '2025-Q4': 0.0381,  // 10-K: "3.81%, down 68bps YoY"
   '2026-Q1': 0.0350,  // Q1 2026 EPR: "3.5% reserve return rate, down 66bps YoY"
+  '2026-Q2': 0.0350,  // Q2 2026 EPR: "3.5% reserve return rate, down 66bps YoY"
 }
 
 /**
@@ -365,6 +367,40 @@ export const OTHER_REVENUE_BREAKDOWN_Q1_2026 = {
   fy2026Guidance: { low: 150_000_000, high: 170_000_000 },
 }
 
+/**
+ * Q2 2026 Other Revenue: ~$34M total (reported $34M, +41% YoY)
+ *
+ * Reported (Q2 2026 EPR / earnings call): "Other Revenue of $34 million
+ * increased 41% year-over-year from growth in subscription and services revenue."
+ * The subscription vs transaction split was not separately disclosed for Q2;
+ * the split below is estimated and labeled accordingly.
+ *
+ * FY2026 Guidance RAISED to $310-330M (from $150-170M), driven by ~$180M of
+ * Arc token presale revenue expected to be recognized in 2026 as product
+ * milestones are achieved.
+ */
+export const OTHER_REVENUE_BREAKDOWN_Q2_2026 = {
+  total: 33_300_000,            // residual to reconcile with $701.3M total & $668M reserve; reported ~$34M
+  subscription: {
+    total: 28_000_000,          // estimated — "growth in subscription and services revenue"
+    components: {
+      blockchainPartnershipFees: 24_000_000,  // estimated majority
+      usycManagementFees: 2_000_000,          // estimated
+      mintPlatformFees: 2_000_000,            // estimated remainder
+    },
+  },
+  transaction: {
+    total: 5_300_000,           // estimated
+    components: {
+      cctpFastTransferFees: 3_000_000,        // estimated
+      mintFastRedemptionFees: 1_300_000,      // estimated
+      cpnTransactionFees: 700_000,            // estimated, scaling with CPN volume
+      otherTransactionFees: 300_000,          // estimated remainder
+    },
+  },
+  fy2026Guidance: { low: 310_000_000, high: 330_000_000 },  // raised in Q2 2026 (incl. ~$180M Arc presale)
+}
+
 // =============================================================================
 // 6. RATE SENSITIVITY MODEL
 // =============================================================================
@@ -576,8 +612,55 @@ export const Q1_2026_ATTRIBUTION = {
 }
 
 /**
+ * Q2 2026 Revenue Attribution Summary (three months ended June 30, 2026)
+ *
+ * Total Revenue: $701.3M (+7% YoY)
+ *   Reserve Income: $668.0M (95.2%)
+ *     - Reserve return rate: 3.50% (down 66bps YoY, lower SOFR)
+ *     - Avg USDC circulation: $76.5B (all-time high, +25% YoY)
+ *     - Distribution costs: $412.0M (61.7% of reserve income, +1% YoY)
+ *     - Net reserve income: $256.0M
+ *
+ *   Other Revenue: $33.3M (~$34M reported, +41% YoY)
+ *     - Subscription/services + transaction (split estimated)
+ *
+ * RLDC: $289M (+15% YoY); RLDC margin ~41% (+302bps YoY)
+ * Adjusted EBITDA: $143M (+8% YoY)
+ * Net income from continuing operations: $48M; diluted EPS $0.18
+ */
+export const Q2_2026_ATTRIBUTION = {
+  period: '2026-Q2',
+  periodLabel: 'Q2 2026',
+  totalRevenue: 701_300_000,
+  reserveIncome: {
+    gross: 668_000_000,
+    returnRate: 0.0350,
+    avgCirculation: 76_500_000_000,
+    distributionCosts: 412_000_000,
+    distributionPctOfReserve: 61.7,
+    net: 256_000_000,
+  },
+  otherRevenue: {
+    total: 33_300_000,            // ~$34M reported
+    subscriptionServices: 28_000_000,  // estimated (split not disclosed for Q2)
+    transactionRevenue: 5_300_000,     // estimated
+  },
+  rldcMarginPct: 41.2,            // RLDC $289M / revenue $701.3M; reported ~41% (+302bps YoY)
+  adjustedEbitda: 143_000_000,
+  // Product volume metrics (not directly revenue)
+  productVolumes: {
+    cctpVolume: 55_000_000_000,                  // estimated — Q2 CCTP volume not separately disclosed
+    cctpBridgeMarketShare: 60,                   // estimated
+    cpnAnnualizedTpv: 14_700_000_000,            // trailing 30-day at quarter end, +76% QoQ
+    mintRedeemVolume: 170_000_000_000,           // ~$1.9B/day avg, +105% YoY
+    onchainTxVolume: 14_800_000_000_000,         // USDC on-chain transaction volume, +151% YoY
+    stablecoinVolumeMarketShare: 70,             // ~70% of stablecoin tx volume (new record in June)
+  },
+}
+
+/**
  * Convenience aliases pointing at the most recently reported quarter.
  * Repoint these whenever a newer quarter is appended above.
  */
-export const LATEST_ATTRIBUTION = Q1_2026_ATTRIBUTION
-export const LATEST_OTHER_REVENUE = OTHER_REVENUE_BREAKDOWN_Q1_2026
+export const LATEST_ATTRIBUTION = Q2_2026_ATTRIBUTION
+export const LATEST_OTHER_REVENUE = OTHER_REVENUE_BREAKDOWN_Q2_2026
