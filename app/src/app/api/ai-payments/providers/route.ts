@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { probeX402Endpoint } from '@/lib/x402-probe'
 
+// 实时执行，避免 App Router 构建时静态缓存该路由
+export const dynamic = 'force-dynamic'
+
 // probe_blocked: endpoint confirmed, but auth middleware blocks probe before reaching 402
 export type ProviderTrackStatus = 'verified' | 'endpoint_known' | 'probe_blocked' | 'pending' | 'not_x402'
 

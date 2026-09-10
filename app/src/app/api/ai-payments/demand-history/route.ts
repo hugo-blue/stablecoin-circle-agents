@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+// 实时执行，避免 App Router 构建时静态缓存该路由
+export const dynamic = 'force-dynamic'
+
 type DailyDownload = { day: string; downloads: number }
 export type WeeklyDownload = { weekStart: string; downloads: number }
 export type StarWoW = { lastWeek: number; prevWeek: number } | null

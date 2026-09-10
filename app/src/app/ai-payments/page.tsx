@@ -293,6 +293,7 @@ type X402Snapshot = {
   activeSellers: number
   activeBuyers: number
   topServer: { name: string; sharePct: number }
+  live?: boolean
 }
 
 function fmtK(n: number): string {
@@ -427,7 +428,7 @@ function DemandSection() {
             <div className="bg-gray-50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-gray-400">Agentic GDP</p>
               <p className="text-lg font-bold text-black">$470M+</p>
-              <p className="text-[10px] text-gray-400">快照 2026-03-21</p>
+              <p className="text-[10px] text-amber-600">静态·非实时</p>
             </div>
             <div className="bg-gray-50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-gray-400">已部署 Agent</p>
@@ -737,7 +738,7 @@ export default function AiPaymentsPage() {
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">x402scan 买方数</p>
             <p className="text-xl font-bold text-black">{x402Stats ? fmtK(x402Stats.activeBuyers) : '—'}</p>
-            <p className="text-[10px] text-gray-400">几乎全为 AI Agent · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}</p>
+            <p className="text-[10px] text-gray-400">几乎全为 AI Agent · <span className="text-amber-600">静态·非实时</span></p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">
@@ -758,13 +759,13 @@ export default function AiPaymentsPage() {
             <p className="text-[10px] text-gray-400 mt-1">
               {onchainData
                 ? `Basescan 链上验证 · ${onchainData.activeAddresses}/${onchainData.totalAddresses} 地址活跃`
-                : `快照 ${x402Stats?.snapshotDate ?? '2026-03-21'} · x402scan`}
+                : `快照 ${x402Stats?.snapshotDate ?? '—'} · x402scan`}
             </p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">Virtuals 已部署 Agent</p>
             <p className="text-xl font-bold text-black">18K+</p>
-            <p className="text-[10px] text-gray-400">Agentic GDP $470M+ · 快照 2026-03-21</p>
+            <p className="text-[10px] text-gray-400">Agentic GDP $470M+ · <span className="text-amber-600">静态·非实时</span></p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-[10px] text-gray-400 mb-1">
@@ -805,8 +806,8 @@ export default function AiPaymentsPage() {
             <p className="text-[10px] text-gray-400 mb-1">x402scan 卖方数</p>
             <p className="text-xl font-bold text-black">{x402Stats ? x402Stats.activeSellers : '—'}</p>
             <p className="text-[10px] text-gray-400">
-              active servers · 快照 {x402Stats?.snapshotDate ?? '2026-03-21'}
-              {x402Stats && ` · 官方月 ${fmtK(x402Stats.officialMonthlyTxCount)} 笔`}
+              active servers · <span className="text-amber-600">静态·非实时</span>
+              {x402Stats?.live && ` · 近30天链上 ${fmtK(x402Stats.officialMonthlyTxCount)} 笔`}
             </p>
           </div>
 

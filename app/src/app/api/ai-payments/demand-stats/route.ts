@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+// 实时执行，避免 App Router 构建时静态缓存该路由
+export const dynamic = 'force-dynamic'
+
 // ClawHub stats — total from clawhub.ai, x402 skills manually verified
 const CLAWHUB_STATIC = {
   totalSkills: 3286,
