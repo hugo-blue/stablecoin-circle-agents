@@ -26,8 +26,8 @@ export type X402OnchainData = {
 
 type FetchResult = { txs: TokenTx[]; ok: boolean }
 
-/** 拉取单个地址的 USDC tokentx。ok=false 表示抓取失败（非「无交易」）。 */
-async function fetchUsdcTransfers(address: string): Promise<FetchResult> {
+/** 拉取单个地址的 USDC tokentx（单次）。ok=false 表示抓取失败（非「无交易」）。 */
+async function fetchOnce(address: string): Promise<FetchResult> {
   const url = new URL(BLOCKSCOUT_API)
   url.searchParams.set('module', 'account')
   url.searchParams.set('action', 'tokentx')
@@ -63,6 +63,14 @@ async function fetchUsdcTransfers(address: string): Promise<FetchResult> {
   return { txs: [], ok: false }
 }
 
+/** 带一次重试，缓解 Blockscout 偶发限流。 */
+async function fetchUsdcTransfers(address: string): Promise<FetchResult> {
+  const first = await fetchOnce(address)
+  if (first.ok) return first
+  await new Promise(r => setTimeout(r, process.env.NODE_ENV === 'test' ? 0 : 500))
+  return fetchOnce(address)
+}
+
 // 用共享索引计数器实现的简单并发池
 async function withConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
   const results: T[] = new Array(tasks.length)
@@ -92,7 +100,7 @@ function buildSeries(map: Map<string, number>): DailyTxCount[] {
 /** 拉取 + 聚合 facilitator 地址池近 30 天的 USDC 转出（x402 结算）。 */
 export async function fetchFacilitatorOnchain(): Promise<X402OnchainData> {
   const addresses = [...CDP_FACILITATOR_ADDRESSES]
-  const results = await withConcurrency(addresses.map(a => () => fetchUsdcTransfers(a)), 5)
+  const results = await withConcurrency(addresses.map(a => () => fetchUsdcTransfers(a)), 2)
 
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
   const map = new Map<string, number>()

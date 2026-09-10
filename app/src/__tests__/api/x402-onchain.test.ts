@@ -111,7 +111,7 @@ describe('GET /api/ai-payments/x402-onchain', () => {
     expect(res.status).toBe(200)
     expect(body.state).toBe('error')
     expect(body.data).toBeNull()
-  })
+  }, 20000)
 
   it('treats API errors (e.g. rate limit) as failures, not zero', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(API_ERR))
@@ -120,5 +120,5 @@ describe('GET /api/ai-payments/x402-onchain', () => {
 
     expect(body.state).toBe('error') // 全部限流 = 源不可达，而非「真 0」
     expect(body.data).toBeNull()
-  })
+  }, 20000)
 })

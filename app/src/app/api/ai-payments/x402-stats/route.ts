@@ -59,8 +59,8 @@ function build(live: Live | null) {
 export async function GET() {
   try {
     const oc = await fetchFacilitatorOnchain()
-    // 只要不是「全部地址抓取失败」，就采用实时（0 是真实的 0，不再伪装成快照）
-    if (oc.failedAddresses < oc.totalAddresses) {
+    // 多数地址成功才采用实时（0 是真实的 0）；多数失败则退回静态 stale
+    if (oc.failedAddresses <= oc.totalAddresses / 2) {
       const last7 = oc.dailyTxCounts.slice(-7)
       const dailyTx = last7.length ? Math.round(last7.reduce((s, d) => s + d.txCount, 0) / last7.length) : 0
       const cumulative = oc.dailyTxCounts.reduce((s, d) => s + d.txCount, 0)

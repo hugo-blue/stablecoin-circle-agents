@@ -22,8 +22,8 @@ export async function GET() {
 
   try {
     const data = await fetchFacilitatorOnchain()
-    // 所有地址都抓取失败 → 源不可达（不缓存失败结果）
-    if (data.failedAddresses >= data.totalAddresses) {
+    // 多数地址抓取失败（如被限流）→ 数据不可靠，报 error（不缓存失败结果）
+    if (data.failedAddresses > data.totalAddresses / 2) {
       return NextResponse.json({ state: 'error', data: null, updatedAt: new Date().toISOString() })
     }
     cache = { ts: Date.now(), data }
