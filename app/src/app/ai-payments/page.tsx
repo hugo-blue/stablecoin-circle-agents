@@ -5,6 +5,7 @@ import type { Provider } from '@/app/api/ai-payments/providers/route'
 import type { WeeklyDownload } from '@/app/api/ai-payments/demand-history/route'
 import type { X402OnchainData, DailyTxCount } from '@/app/api/ai-payments/x402-onchain/route'
 import { NewsWidget } from '@/components/NewsWidget'
+import { AgentLandscape } from '@/components/AgentLandscape'
 
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString('zh-CN', {
@@ -1009,6 +1010,9 @@ export default function AiPaymentsPage() {
           {' '}发现，已通过 Basescan 链上数据验证。
         </div>
       </div>
+
+      {/* ── 6. 全景补强（可信度 · 卡组织轨 · 交易所 · 融资 · 市场）──────────── */}
+      <AgentLandscape />
 
     </div>
   )
