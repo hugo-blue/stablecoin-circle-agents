@@ -1,29 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GET, _resetCache } from '@/app/api/ai-payments/x402-onchain/route'
-import { BASE_USDC_CONTRACT } from '@/lib/data/cdp-facilitators'
+import { CDP_FACILITATOR_ADDRESSES } from '@/lib/data/cdp-facilitators'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+// 数据源为 Base Blockscout 的 USDC tokentx；口径 = 统计 facilitator 转出（from = facilitator）。
 
-const RECENT_TS = String(Math.floor((Date.now() - 2 * 24 * 60 * 60 * 1000) / 1000)) // 2 days ago
-const OLD_TS = String(Math.floor((Date.now() - 40 * 24 * 60 * 60 * 1000) / 1000))  // 40 days ago (outside window)
+const FAC0 = CDP_FACILITATOR_ADDRESSES[0]
+const RECENT_TS = String(Math.floor((Date.now() - 2 * 24 * 60 * 60 * 1000) / 1000)) // 2 天前
+const OLD_TS = String(Math.floor((Date.now() - 40 * 24 * 60 * 60 * 1000) / 1000))   // 40 天前（窗口外）
 
-function makeTx(to: string, isError = '0', ts = RECENT_TS) {
-  return { timeStamp: ts, to, isError }
+// 一笔 USDC 转账；from 决定是否算作该 facilitator 的转出
+function transfer(from: string, ts = RECENT_TS) {
+  return { timeStamp: ts, from, to: '0x0000000000000000000000000000000000000001' }
 }
 
-function makeBasescanResp(txs: object[]) {
+function okResp(txs: object[]) {
   return { ok: true, json: () => Promise.resolve({ status: '1', message: 'OK', result: txs }) }
 }
-
 const EMPTY_RESP = { ok: true, json: () => Promise.resolve({ status: '0', message: 'No transactions found', result: [] }) }
-const ERROR_RESP = { ok: false, json: () => Promise.resolve({}) }
+const HTTP_ERR = { ok: false, json: () => Promise.resolve({}) }
+const API_ERR = { ok: true, json: () => Promise.resolve({ status: '0', message: 'Max rate limit reached', result: [] }) }
 
-// ─── tests ────────────────────────────────────────────────────────────────────
+// 按请求 URL 里的 address 参数分发响应（对并发顺序稳健）
+function urlMock(handler: (url: string) => unknown) {
+  return vi.fn().mockImplementation((input: unknown) => Promise.resolve(handler(String(input).toLowerCase())))
+}
+const isFac0 = (url: string) => url.includes(FAC0.toLowerCase())
 
 describe('GET /api/ai-payments/x402-onchain', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.stubEnv('ETHERSCAN_API_KEY', 'test-key-123')
     _resetCache()
   })
 
@@ -33,12 +39,12 @@ describe('GET /api/ai-payments/x402-onchain', () => {
     const body = await res.json()
 
     expect(res.status).toBe(200)
-    expect(['success', 'partial', 'error']).toContain(body.state)
+    expect(['success', 'error']).toContain(body.state)
     expect(typeof body.updatedAt).toBe('string')
     expect(body).toHaveProperty('data')
   })
 
-  it('data has dailyTxCounts (30 entries), totalAddresses, activeAddresses', async () => {
+  it('data has dailyTxCounts (30 entries), totalAddresses, activeAddresses, failedAddresses', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(EMPTY_RESP))
     const res = await GET()
     const { data } = await res.json()
@@ -49,40 +55,25 @@ describe('GET /api/ai-payments/x402-onchain', () => {
     expect(typeof data.dailyTxCounts[0].txCount).toBe('number')
     expect(data.totalAddresses).toBe(25)
     expect(typeof data.activeAddresses).toBe('number')
+    expect(typeof data.failedAddresses).toBe('number')
   })
 
-  it('counts only USDC transactions (to == BASE_USDC_CONTRACT)', async () => {
-    // First address returns 3 txs (2 USDC, 1 non-USDC); rest return empty
-    let callCount = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
-      if (callCount++ === 0) {
-        return Promise.resolve(makeBasescanResp([
-          makeTx(BASE_USDC_CONTRACT),              // USDC → count
-          makeTx('0xother_contract'),               // not USDC → skip
-          makeTx(BASE_USDC_CONTRACT.toUpperCase()), // case insensitive → count
-        ]))
-      }
-      return Promise.resolve(EMPTY_RESP)
-    }))
+  it('counts only outgoing USDC transfers (from == facilitator)', async () => {
+    // FAC0 返回 3 笔：2 笔 from=FAC0（转出，计）+ 1 笔 from=其它（转入，跳过）
+    vi.stubGlobal('fetch', urlMock(url => isFac0(url)
+      ? okResp([transfer(FAC0), transfer('0xbuyeraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), transfer(FAC0.toUpperCase())])
+      : EMPTY_RESP))
     const res = await GET()
     const { data } = await res.json()
 
     const total = data.dailyTxCounts.reduce((s: number, d: { txCount: number }) => s + d.txCount, 0)
-    expect(total).toBe(2) // only the 2 USDC txs
+    expect(total).toBe(2) // 仅 2 笔转出（大小写不敏感）
   })
 
-  it('excludes failed transactions (isError != "0")', async () => {
-    // First address returns 2 txs (1 success, 1 failed); rest return empty
-    let callCount = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
-      if (callCount++ === 0) {
-        return Promise.resolve(makeBasescanResp([
-          makeTx(BASE_USDC_CONTRACT, '0'),  // success → count
-          makeTx(BASE_USDC_CONTRACT, '1'),  // failed → skip
-        ]))
-      }
-      return Promise.resolve(EMPTY_RESP)
-    }))
+  it('excludes transfers older than 30 days', async () => {
+    vi.stubGlobal('fetch', urlMock(url => isFac0(url)
+      ? okResp([transfer(FAC0, RECENT_TS), transfer(FAC0, OLD_TS)])
+      : EMPTY_RESP))
     const res = await GET()
     const { data } = await res.json()
 
@@ -90,27 +81,30 @@ describe('GET /api/ai-payments/x402-onchain', () => {
     expect(total).toBe(1)
   })
 
-  it('excludes transactions older than 30 days', async () => {
-    // First address returns 2 txs (1 recent, 1 old); rest return empty
-    let callCount = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
-      if (callCount++ === 0) {
-        return Promise.resolve(makeBasescanResp([
-          makeTx(BASE_USDC_CONTRACT, '0', RECENT_TS), // recent → count
-          makeTx(BASE_USDC_CONTRACT, '0', OLD_TS),    // old → skip
-        ]))
-      }
-      return Promise.resolve(EMPTY_RESP)
-    }))
+  it('activeAddresses counts only facilitators with ≥1 outgoing transfer', async () => {
+    vi.stubGlobal('fetch', urlMock(url => isFac0(url)
+      ? okResp([transfer(FAC0)])
+      : EMPTY_RESP))
     const res = await GET()
     const { data } = await res.json()
 
-    const total = data.dailyTxCounts.reduce((s: number, d: { txCount: number }) => s + d.txCount, 0)
-    expect(total).toBe(1)
+    expect(data.activeAddresses).toBe(1)
   })
 
-  it('returns state=error when ETHERSCAN_API_KEY is missing', async () => {
-    vi.stubEnv('ETHERSCAN_API_KEY', '')
+  it('returns state=success when some addresses fail but not all', async () => {
+    // FAC0 HTTP 失败，其余「无交易」→ 部分失败 → 仍 success
+    vi.stubGlobal('fetch', urlMock(url => isFac0(url) ? HTTP_ERR : EMPTY_RESP))
+    const res = await GET()
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.state).toBe('success')
+    expect(body.data.dailyTxCounts.length).toBe(30)
+    expect(body.data.failedAddresses).toBe(1)
+  })
+
+  it('returns state=error when ALL addresses fail (source unreachable)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(HTTP_ERR))
     const res = await GET()
     const body = await res.json()
 
@@ -119,34 +113,12 @@ describe('GET /api/ai-payments/x402-onchain', () => {
     expect(body.data).toBeNull()
   })
 
-  it('returns state=success even if some addresses return HTTP errors (fetch continues)', async () => {
-    let callCount = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
-      callCount++
-      // first call fails, rest return empty
-      return callCount === 1 ? Promise.resolve(ERROR_RESP) : Promise.resolve(EMPTY_RESP)
-    }))
+  it('treats API errors (e.g. rate limit) as failures, not zero', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(API_ERR))
     const res = await GET()
     const body = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(body.state).toBe('success')
-    expect(body.data.dailyTxCounts.length).toBe(30)
-  })
-
-  it('activeAddresses counts only addresses that had USDC txs', async () => {
-    let callCount = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
-      callCount++
-      // first address has 1 USDC tx, rest are empty
-      if (callCount === 1) {
-        return Promise.resolve(makeBasescanResp([makeTx(BASE_USDC_CONTRACT)]))
-      }
-      return Promise.resolve(EMPTY_RESP)
-    }))
-    const res = await GET()
-    const { data } = await res.json()
-
-    expect(data.activeAddresses).toBe(1)
+    expect(body.state).toBe('error') // 全部限流 = 源不可达，而非「真 0」
+    expect(body.data).toBeNull()
   })
 })

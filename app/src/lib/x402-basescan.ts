@@ -1,39 +1,66 @@
 /**
- * x402 链上聚合（Basescan）— 共享数据逻辑
+ * x402 链上聚合（Base Blockscout）— 共享数据逻辑
  *
- * 从 CDP Facilitator 地址池的 Basescan txlist 拉取，过滤到 Base USDC 合约，
- * 聚合出近 30 天日均交易序列与活跃 facilitator 地址数。
+ * 数据源：Base 官方 Blockscout（https://base.blockscout.com/api，免费、无需 key、
+ * 兼容 Etherscan V1 响应格式）。取代已弃用的 api.basescan.org V1
+ * （Etherscan 已迁移到 V2，且 V2 的 Base 链免费 key 不支持）。
+ *
+ * 统计口径：对每个 CDP Facilitator 地址取 USDC tokentx，计其**转出**（from = facilitator）
+ * 的转账笔数 = x402 结算笔数下界。activeAddresses = 近 30 天有 ≥1 笔转出的 facilitator 数。
+ * failedAddresses = 抓取失败（HTTP/API 错误）的地址数——用于区分「真 0」与「源不可达」。
+ *
  * 由 /api/ai-payments/x402-onchain 与 /api/ai-payments/x402-stats 共用。
- *
- * 注意：facilitator 地址（≤25 个）的 tx 是「结算笔数」的真实链上下界，
- * 但 activeAddresses = 活跃 facilitator 地址数，**不是买方数**——买方计数无法
- * 从此数据源得出，见各路由对静态字段的标注。
  */
 import { CDP_FACILITATOR_ADDRESSES, BASE_USDC_CONTRACT } from '@/lib/data/cdp-facilitators'
 
-export type BasescanTx = { timeStamp: string; to: string; isError: string }
+const BLOCKSCOUT_API = 'https://base.blockscout.com/api'
+
+export type TokenTx = { timeStamp: string; from: string; to: string }
 export type DailyTxCount = { date: string; txCount: number }
 export type X402OnchainData = {
   dailyTxCounts: DailyTxCount[]  // 近 30 天，升序
   totalAddresses: number
-  activeAddresses: number        // 周期内有 ≥1 笔 USDC tx 的 facilitator 地址数
+  activeAddresses: number        // 近 30 天有 ≥1 笔 USDC 转出的 facilitator 地址数
+  failedAddresses: number        // 抓取失败的地址数（区分真 0 与源不可达）
 }
 
-async function fetchAddressTxs(address: string, apiKey: string): Promise<BasescanTx[]> {
-  const url = new URL('https://api.basescan.org/api')
+type FetchResult = { txs: TokenTx[]; ok: boolean }
+
+/** 拉取单个地址的 USDC tokentx。ok=false 表示抓取失败（非「无交易」）。 */
+async function fetchUsdcTransfers(address: string): Promise<FetchResult> {
+  const url = new URL(BLOCKSCOUT_API)
   url.searchParams.set('module', 'account')
-  url.searchParams.set('action', 'txlist')
+  url.searchParams.set('action', 'tokentx')
+  url.searchParams.set('contractaddress', BASE_USDC_CONTRACT)
   url.searchParams.set('address', address)
   url.searchParams.set('sort', 'desc')
   url.searchParams.set('page', '1')
   url.searchParams.set('offset', '200')
-  url.searchParams.set('apikey', apiKey)
 
-  const res = await fetch(url.toString())
-  if (!res.ok) return []
-  const body = await res.json()
-  if (body.status !== '1' || !Array.isArray(body.result)) return []
-  return body.result as BasescanTx[]
+  let res: Response
+  try {
+    res = await fetch(url.toString(), { headers: { accept: 'application/json' } })
+  } catch {
+    return { txs: [], ok: false }
+  }
+  if (!res.ok) return { txs: [], ok: false }
+
+  let body: { status?: string; message?: string; result?: unknown }
+  try {
+    body = await res.json()
+  } catch {
+    return { txs: [], ok: false }
+  }
+
+  if (body.status === '1' && Array.isArray(body.result)) {
+    return { txs: body.result as TokenTx[], ok: true }
+  }
+  // Blockscout 空结果：status '0' + "No transactions found" → 真 0（非失败）
+  if (body.status === '0' && /no transactions found/i.test(String(body.message ?? ''))) {
+    return { txs: [], ok: true }
+  }
+  // 其它（限流 / 弃用 / 异常）→ 抓取失败
+  return { txs: [], ok: false }
 }
 
 // 用共享索引计数器实现的简单并发池
@@ -50,31 +77,6 @@ async function withConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): P
   return results
 }
 
-function tsToDate(ts: string): string {
-  return new Date(parseInt(ts, 10) * 1000).toISOString().slice(0, 10)
-}
-
-function buildDailyMap(allTxs: BasescanTx[][]): { map: Map<string, number>; activeAddresses: number } {
-  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-  const map = new Map<string, number>()
-  let activeAddresses = 0
-
-  for (const txs of allTxs) {
-    let hasActivity = false
-    for (const tx of txs) {
-      if (tx.isError !== '0') continue
-      if (tx.to.toLowerCase() !== BASE_USDC_CONTRACT) continue
-      const ms = parseInt(tx.timeStamp, 10) * 1000
-      if (ms < cutoff) continue
-      const date = tsToDate(tx.timeStamp)
-      map.set(date, (map.get(date) ?? 0) + 1)
-      hasActivity = true
-    }
-    if (hasActivity) activeAddresses++
-  }
-  return { map, activeAddresses }
-}
-
 function buildSeries(map: Map<string, number>): DailyTxCount[] {
   const result: DailyTxCount[] = []
   const now = new Date()
@@ -87,12 +89,35 @@ function buildSeries(map: Map<string, number>): DailyTxCount[] {
   return result
 }
 
-/** 拉取 + 聚合 facilitator 地址池的近 30 天链上交易。抛错由调用方兜底。 */
-export async function fetchFacilitatorOnchain(apiKey: string): Promise<X402OnchainData> {
+/** 拉取 + 聚合 facilitator 地址池近 30 天的 USDC 转出（x402 结算）。 */
+export async function fetchFacilitatorOnchain(): Promise<X402OnchainData> {
   const addresses = [...CDP_FACILITATOR_ADDRESSES]
-  const tasks = addresses.map(addr => () => fetchAddressTxs(addr, apiKey).catch(() => [] as BasescanTx[]))
-  const allTxs = await withConcurrency(tasks, 5)
-  const { map, activeAddresses } = buildDailyMap(allTxs)
-  const dailyTxCounts = buildSeries(map)
-  return { dailyTxCounts, totalAddresses: addresses.length, activeAddresses }
+  const results = await withConcurrency(addresses.map(a => () => fetchUsdcTransfers(a)), 5)
+
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
+  const map = new Map<string, number>()
+  let activeAddresses = 0
+  let failedAddresses = 0
+
+  results.forEach((r, i) => {
+    if (!r.ok) { failedAddresses++; return }
+    const fac = addresses[i].toLowerCase()
+    let hasActivity = false
+    for (const tx of r.txs) {
+      if (!tx.from || tx.from.toLowerCase() !== fac) continue // 只算 facilitator 转出（结算）
+      const ms = parseInt(tx.timeStamp, 10) * 1000
+      if (isNaN(ms) || ms < cutoff) continue
+      const date = new Date(ms).toISOString().slice(0, 10)
+      map.set(date, (map.get(date) ?? 0) + 1)
+      hasActivity = true
+    }
+    if (hasActivity) activeAddresses++
+  })
+
+  return {
+    dailyTxCounts: buildSeries(map),
+    totalAddresses: addresses.length,
+    activeAddresses,
+    failedAddresses,
+  }
 }
